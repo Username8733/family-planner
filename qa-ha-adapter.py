@@ -62,6 +62,20 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   assert ev("!location.search.includes('code=')&&!location.search.includes('state=')")
   assert ev("received.some(m=>m.type==='hemma-temperature-states-v1'&&m.sensors.length===1&&m.sensors[0].id==='sensor.outdoor')"),ev("received")
   assert ev("!JSON.stringify(received).includes('light.private')")
+  # Fit to the visible area below a simulated HA header, with no bottom gap.
+  ev("document.body.style.cssText='margin:0;padding-top:56px'")
+  for width,height in [(1440,1000),(768,1024),(1024,768),(390,844)]:
+   call('Emulation.setDeviceMetricsOverride',{'width':width,'height':height,'deviceScaleFactor':1,'mobile':False})
+   for _ in range(50):
+    if ev("Math.abs(adapter.frame.getBoundingClientRect().bottom-innerHeight)<2"):break
+    time.sleep(.02)
+   assert ev("Math.abs(adapter.frame.getBoundingClientRect().bottom-innerHeight)<2&&adapter.frame.getBoundingClientRect().top===56")
+  ev("adapter.setConfig({url:'/api/hassio_ingress/fixture/index.html',height:800})")
+  time.sleep(.04)
+  assert ev("adapter.frame.getBoundingClientRect().height===800")
+  ev("adapter.setConfig({url:'/api/hassio_ingress/fixture/index.html'})")
+  time.sleep(.04)
+  assert ev("Math.abs(adapter.frame.getBoundingClientRect().bottom-innerHeight)<2")
   # Periodic validation, then a failed session triggers fresh authentication.
   ev("adapter.keepIngressAlive()")
   assert ev("wsCalls.some(c=>c.endpoint==='/ingress/validate_session'&&c.data.session==='fixture-session')")

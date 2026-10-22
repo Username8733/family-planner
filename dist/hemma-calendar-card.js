@@ -4,6 +4,7 @@ class HemmaCalendarCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({mode:'open'});
+    this.onResize = () => this.scheduleFrameResize();
     this.onMessage = event => {
       if (event.origin === location.origin && event.source === this.frame?.contentWindow &&
           event.data?.type === 'hemma-temperature-ready-v1') this.sendTemperatures();
@@ -15,7 +16,7 @@ class HemmaCalendarCard extends HTMLElement {
     this.config = {...config, url:url.href};
     if (!this.frame) {
       const style = document.createElement('style');
-      style.textContent = ':host{display:block}iframe{display:block;width:100%;height:calc(100dvh - 112px);min-height:610px;border:0;border-radius:12px}';
+      style.textContent = ':host{display:block}iframe{display:block;width:100%;height:calc(100dvh - var(--header-height,56px));min-height:0;border:0;border-radius:12px}';
       this.frame = document.createElement('iframe');
       this.frame.title = "Family Planner";
       this.frame.allow = 'fullscreen';
@@ -27,7 +28,19 @@ class HemmaCalendarCard extends HTMLElement {
     this.needsIngress = url.pathname.startsWith('/api/hassio_ingress/');
     if (!this.needsIngress) this.frame.src = url.href;
     else this.ensureIngress();
-    if (Number.isFinite(config.height) && config.height >= 610) this.frame.style.height = config.height+'px';
+    this.scheduleFrameResize();
+  }
+  scheduleFrameResize() {
+    if (this.resizeTask) return;
+    this.resizeTask = requestAnimationFrame(() => { this.resizeTask = null; this.fitFrame(); });
+  }
+  fitFrame() {
+    if (!this.frame || !this.isConnected) return;
+    const fixed = Number.isFinite(this.config?.height) && this.config.height >= 610;
+    const viewport = window.visualViewport;
+    const bottom = viewport ? viewport.height + viewport.offsetTop : innerHeight;
+    const height = fixed ? this.config.height : Math.max(1, Math.floor(bottom - Math.max(0, this.getBoundingClientRect().top)));
+    if (Math.abs(this.frame.getBoundingClientRect().height - height) > 1) this.frame.style.height = height+'px';
   }
   set hass(value) { this._hass = value; this.ensureIngress(); this.sendTemperatures(); }
   async ensureIngress() {
@@ -92,8 +105,24 @@ class HemmaCalendarCard extends HTMLElement {
     }));
     this.frame.contentWindow.postMessage({type:'hemma-temperature-states-v1',sensors},location.origin);
   }
-  connectedCallback() { window.addEventListener('message',this.onMessage); this.ensureIngress(); this.ingressHeartbeat = setInterval(() => this.keepIngressAlive(), 5*60*1000); }
-  disconnectedCallback() { window.removeEventListener('message',this.onMessage); clearInterval(this.ingressHeartbeat); }
+  connectedCallback() {
+    window.addEventListener('message',this.onMessage);
+    window.addEventListener('resize',this.onResize);
+    window.visualViewport?.addEventListener('resize',this.onResize);
+    this.frameObserver = new ResizeObserver(this.onResize);
+    this.frameObserver.observe(this);
+    this.scheduleFrameResize();
+    this.ensureIngress();
+    this.ingressHeartbeat = setInterval(() => this.keepIngressAlive(), 5*60*1000);
+  }
+  disconnectedCallback() {
+    window.removeEventListener('message',this.onMessage);
+    window.removeEventListener('resize',this.onResize);
+    window.visualViewport?.removeEventListener('resize',this.onResize);
+    this.frameObserver?.disconnect();
+    cancelAnimationFrame(this.resizeTask); this.resizeTask = null;
+    clearInterval(this.ingressHeartbeat);
+  }
   getCardSize() { return 12; }
 }
 if (!customElements.get('hemma-calendar-card')) customElements.define('hemma-calendar-card',HemmaCalendarCard);
