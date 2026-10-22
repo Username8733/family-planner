@@ -1361,14 +1361,16 @@ function cellContent(cell,date,p,groups){
  const g=groups.find(g=>g.start<=date&&g.end>=date);
  // Keep the same tracks throughout an overlapping group, including across month boundaries.
  const visibleSlots=g?g.slots.filter(s=>s.event.date<=date&&endDateOf(s.event)>=date).sort((a,b)=>a.lane-b.lane):[];
- if(visibleSlots.length){
-  cell.classList.add('occupied');
+ const lanes=Math.max(1,Math.min(3,g?.lanes||1)),overflow=g?.lanes>3;
+ const hidden=overflow?visibleSlots.filter(s=>s.lane>=2).length:0;
+ const hasEmptyLane=Array.from({length:lanes},(_,lane)=>lane).some(lane=>!(overflow&&lane===2&&hidden)&&!visibleSlots.some(slot=>slot.lane===lane));
+ // Preserve range widths, but only add a margin button when no empty track can be clicked.
+ if(visibleSlots.length)cell.classList.add('occupied');
+ if(visibleSlots.length&&!hasEmptyLane){
   const add=document.createElement('button');add.type='button';add.className='cell-add';add.textContent='+';add.title=msg('New event');
   add.setAttribute('aria-label',msg("Add an event for ")+p.name+', '+dateLabel(date));
   add.addEventListener('click',()=>openCell(date,p.id));cell.append(add);
  }
- const lanes=Math.max(1,Math.min(3,g?.lanes||1)),overflow=g?.lanes>3;
- const hidden=overflow?visibleSlots.filter(s=>s.lane>=2).length:0;
  cell.style.setProperty('--lanes',lanes);if(lanes>1)cell.classList.add('multiple');if(hidden)cell.classList.add('crowded');
  for(let lane=0;lane<lanes;lane++){
   const b=document.createElement('button');b.type='button';b.dataset.lane=lane;

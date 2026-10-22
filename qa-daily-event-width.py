@@ -48,6 +48,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
      assert max(d['width'] for d in dims)-min(d['width'] for d in dims)<1,str(dims)
      assert max(d['x'] for d in dims)-min(d['x'] for d in dims)<1,str(dims)
      assert all(d['lanes']==3 and not d['scroll'] for d in dims),str(dims)
+     assert ev("""(()=>{const cells=['22','24','25'].map(d=>document.querySelector('.cell[data-date="2026-10-'+d+'"][data-person="family"]'));return cells.every(c=>!c.querySelector('.cell-add')&&c.querySelector('.empty-slot'))&&!!document.querySelector('.cell[data-date="2026-10-23"][data-person="family"] .cell-add')})()""")
      assert ev("""(()=>{const c=document.querySelector('.cell[data-date="2026-10-23"][data-person="family"]');return c.querySelectorAll('.event').length===2&&c.querySelector('.more-events').textContent==='+2'})()""")
      assert ev("""document.querySelector('.cell[data-date="2026-10-28"][data-person="family"]').style.getPropertyValue('--lanes')==='1'""")
      # Open the whole day from the dense cell; the shared event appears once.
