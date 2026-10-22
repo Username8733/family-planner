@@ -29,15 +29,16 @@ with caldav.DAVClient(url=dav_url,username='test@example.invalid',password='loca
 backend=ICloudCalendar(fixture_root/'private/icloud.json',server_url=dav_url)
 backend.connect('test@example.invalid','local-test-password')
 backend.select(backend.calendars()['calendars'][0]['id'])
-app_server=CalendarHTTPServer(('127.0.0.1',0),root/'dist',backend=backend)
+app_host=os.environ.get('QA_HTTP_HOST','127.0.0.1')
+app_server=CalendarHTTPServer(('127.0.0.1',0),root/'dist',backend=backend,public_host=app_host)
 threading.Thread(target=app_server.serve_forever,daemon=True).start()
-app_url=f'http://127.0.0.1:{app_server.server_port}/'
+app_url=f'http://{app_host}:{app_server.server_port}/'
 def cleanup_online():
  app_server.shutdown();app_server.server_close();dav_proc.terminate();dav_proc.wait(timeout=10);dav_log.close();fixture.cleanup()
 atexit.register(cleanup_online)
 
 with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
- proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--no-proxy-server','--host-resolver-rules=MAP planner.test 127.0.0.1','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  try:
   for _ in range(100):
    f=Path(temp)/'DevToolsActivePort'
@@ -71,6 +72,8 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   call('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1000,'deviceScaleFactor':1,'mobile':False})
   call('Page.navigate',{'url':app_url})
   until("onlineState.available&&onlineState.sources.length===1")
+  if app_host=='planner.test':
+   assert ev("!isSecureContext&&typeof crypto.randomUUID==='undefined'&&typeof crypto.getRandomValues==='function'")
   ev("month=new Date(2026,9,1);render();window.qaPeople=JSON.stringify(people.map(({id,name,color})=>({id,name,color})));window.qaLocal=JSON.stringify(events)")
   ev("document.getElementById('columns').click()")
   until("document.querySelectorAll('#calendar-sources input').length===1")
@@ -85,6 +88,14 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   until("document.querySelector('.source-account')?.textContent.includes('test@example.invalid')")
   assert ev("document.querySelector('.source-account').textContent.startsWith('Connected as:')")
   ev("document.getElementById('cancel-columns').click()")
+  # Both entry points work with iCloud selected on an ordinary LAN HTTP origin.
+  ev("document.getElementById('add').click()")
+  assert ev("document.getElementById('editor').open&&parseSourceChoice(document.getElementById('event-source').value)[0]==='icloud'")
+  assert ev("/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(onlineCreateKey)")
+  ev("window.firstRequestId=onlineCreateKey;document.getElementById('close').click();[...document.querySelectorAll('.cell')].find(c=>c.dataset.date==='2026-10-22'&&c.dataset.person==='person-1').querySelector('.empty-slot').click()")
+  assert ev("document.getElementById('editor').open&&document.getElementById('date').value==='2026-10-22'&&onlineCreateKey!==firstRequestId")
+  assert ev("new Set(Array.from({length:1000},()=>newRequestId())).size===1000")
+  ev("document.getElementById('close').click()")
   # Add a generic CalDAV source via real browser and real CalDAV server.
   ev("document.getElementById('columns').click();document.getElementById('source-type').value='caldav';document.getElementById('source-type').dispatchEvent(new Event('change'));document.getElementById('source-name').value='Other calendar';document.getElementById('source-url').value="+json.dumps(dav_url)+";document.getElementById('source-user').value='calendar-user';document.getElementById('source-password').value='test-password';document.getElementById('connect-source').click()")
   until("onlineState.sources.length===2")

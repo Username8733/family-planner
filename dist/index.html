@@ -1543,9 +1543,17 @@ function openCell(date,person){
 function openEvent(event,date,person){
  activeDate=date;activePerson=person;fill(event);if(!$('editor').open)$('editor').showModal();
 }
+// randomUUID requires a secure context; HA can also be opened over LAN HTTP.
+function newRequestId(){
+ if(typeof globalThis.crypto.randomUUID==='function')return globalThis.crypto.randomUUID();
+ const bytes=globalThis.crypto.getRandomValues(new Uint8Array(16));
+ bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+ const hex=Array.from(bytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+ return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
+}
 let endTimeAutomatic=true,automaticEndDate=null;
 function fill(event){
- editingOnline=event.online?event:null;onlineCreateKey=event.id?null:crypto.randomUUID();editing=event.id||null;$('editor-title').textContent=editing?msg("Edit event"):msg("New event");
+ editingOnline=event.online?event:null;onlineCreateKey=event.id?null:newRequestId();editing=event.id||null;$('editor-title').textContent=editing?msg("Edit event"):msg("New event");
  $('editor-sub').textContent=endDateOf(event)!==event.date?dateLabel(event.date)+' – '+dateLabel(endDateOf(event))+msg(" · multi-day event"):dateLabel(event.date);
  $('title').value=event.title||'';document.querySelectorAll('#person-options input').forEach(input=>input.checked=participants(event).includes(input.value));$('person-error').classList.add('hidden');$('date').value=event.date;$('end-date').value=endDateOf(event);$('end-date').min=event.date;lastStart=event.date;
  setTimeInput('time',event.time||'');setTimeInput('end',event.online?event.onlineRecord.editEndTime||'':event.end||'');

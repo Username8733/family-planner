@@ -1,6 +1,6 @@
 {
   "name": "Family Planner",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "slug": "family_planner",
   "description": "Family calendar with online calendars and a dedicated Home Assistant dashboard.",
   "arch": [
