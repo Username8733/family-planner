@@ -1,0 +1,13 @@
+# Add /local/familjekalender/hemma-calendar-card.js as a JavaScript module resource.
+# Paste into a separate dashboard's raw configuration after copying dist/ to www.
+title: Family Planner
+views:
+  - title: Family Planner
+    path: kalender
+    type: panel
+    cards:
+      - type: custom:hemma-calendar-card
+        url: /local/familjekalender/index.html
+        # Optional: restrict which temperature entities the app can choose from.
+        # temperature_entities:
+        #   - sensor.ersatt_med_din_utomhusgivare

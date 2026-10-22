@@ -1,0 +1,2 @@
+-r requirements.txt
+xandikos==0.4.10

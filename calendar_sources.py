@@ -1,0 +1,394 @@
+"""Multi-source calendars. Provider secrets are stored outside the served directory."""
+import base64, hashlib, hmac, json, os, secrets, tempfile, threading, time, uuid
+from contextlib import closing
+from datetime import date, datetime, time as day_time, timedelta, timezone
+from pathlib import Path
+from urllib.parse import urlencode, urlsplit, quote
+from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
+from urllib.error import HTTPError
+from zoneinfo import ZoneInfo
+from online_calendar import ICloudCalendar, CalendarError, libraries
+
+GOOGLE_API = 'https://www.googleapis.com/calendar/v3'
+GOOGLE_TOKEN = 'https://oauth2.googleapis.com/token'
+GOOGLE_AUTH = 'https://accounts.google.com/o/oauth2/v2/auth'
+SCOPES = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.events'
+
+def valid_url(value):
+    if not isinstance(value,str) or len(value)>4096:
+        raise CalendarError('Ange en giltig serveradress.')
+    value=value.strip().replace('webcal://','https://')
+    p=urlsplit(value)
+    if p.scheme not in ('http','https') or not p.hostname or p.username or p.password or p.fragment:
+        raise CalendarError('Använd en http- eller https-adress utan inloggningsuppgifter i adressen.')
+    return value
+
+class NoRedirect(HTTPRedirectHandler):
+    # Do not forward a bearer token or a private feed URL to another host.
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+def http(url, method='GET', payload=None, headers=None, form=False):
+    data=None if payload is None else (urlencode(payload).encode() if form else json.dumps(payload).encode())
+    hdr={'Accept':'application/json',**(headers or {})}
+    if data is not None:hdr['Content-Type']='application/x-www-form-urlencoded' if form else 'application/json'
+    try:
+        with build_opener(NoRedirect).open(Request(url,data=data,headers=hdr,method=method),timeout=25) as r:
+            raw=r.read(2_000_001)
+            if len(raw)>2_000_000:raise CalendarError('Kalendersvaret är för stort.',422)
+            return r.status,raw,dict(r.headers)
+    except HTTPError as e:
+        # Upstream bodies and URLs may contain account information. Never surface them.
+        if e.code in (409,412):raise CalendarError('Händelsen har ändrats. Uppdatera kalendern och försök igen.',409)
+        if e.code in (401,403):raise CalendarError('Kalendern nekade åtkomst. Kontrollera anslutning och behörighet.',403)
+        raise CalendarError('Kalendertjänsten kunde inte slutföra åtgärden (HTTP '+str(e.code)+').',502)
+    except (OSError,TimeoutError):
+        raise CalendarError('Kalendertjänsten kunde inte nås. Kontrollera serveradressen och anslutningen.',502)
+
+def json_http(*args,**kwargs):
+    status,raw,headers=http(*args,**kwargs)
+    return json.loads(raw) if raw.strip() else {},headers
+
+def interval(first,last,tz):
+    try:
+        a,b=date.fromisoformat(first),date.fromisoformat(last)
+        if a.year<2000 or b.year>2101 or not 0<(b-a).days<=95:raise ValueError()
+        return datetime.combine(a,day_time(),tz),datetime.combine(b,day_time(),tz)
+    except (ValueError,TypeError):raise CalendarError('Ange ett giltigt datumintervall på högst 95 dagar.')
+
+class CalendarSources:
+    def __init__(self, primary, filename=None):
+        self.primary=primary
+        self.path=Path(filename or primary.config_file.parent/'sources.json')
+        self.lock=threading.RLock()
+        self.data=json.loads(self.path.read_text()) if self.path.exists() else {'key':secrets.token_hex(32),'sources':{}}
+        self.pending={}
+        self.adapters={}
+        self.ha_cache={}
+        self.create_receipts={}
+        if not self.path.exists():self._save()
+    def _save(self):
+        self.path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+        fd,name=tempfile.mkstemp(prefix='.sources-',dir=self.path.parent)
+        try:
+            os.fchmod(fd,0o600)
+            with os.fdopen(fd,'w') as f:
+                json.dump(self.data,f);f.flush();os.fsync(f.fileno())
+            os.replace(name,self.path)
+        finally:
+            if os.path.exists(name):os.unlink(name)
+    def _sign(self,data):
+        raw=base64.urlsafe_b64encode(json.dumps(data,separators=(',',':')).encode()).decode().rstrip('=')
+        sig=hmac.new(self.data['key'].encode(),raw.encode(),hashlib.sha256).hexdigest()
+        return raw+'.'+sig
+    def _decode(self,value):
+        try:
+            raw,sig=value.rsplit('.',1)
+            if not hmac.compare_digest(sig,hmac.new(self.data['key'].encode(),raw.encode(),hashlib.sha256).hexdigest()):raise ValueError()
+            d=json.loads(base64.urlsafe_b64decode(raw+'='*(-len(raw)%4)))
+            if not all(isinstance(d.get(k),str) for k in ['source','calendar','remote']):raise ValueError()
+            return d
+        except (ValueError,TypeError,KeyError,AttributeError):
+            raise CalendarError('Ogiltig händelsereferens.',400)
+    def _source(self,sid):
+        if sid=='icloud':
+            status=self.primary.status()
+            cid=status['calendarId']
+            return {'type':'icloud','name':'iCloud','timezone':status['timezone'],
+                    'selected':[cid] if cid and self.data.get('icloud_enabled',True) else [],
+                    'calendars':[{'id':cid,'name':status['calendarName'],'canCreate':True,'canUpdate':True,'canDelete':True}] if cid else []}
+        if sid not in self.data['sources']:raise CalendarError('Kalenderkällan finns inte.',404)
+        return self.data['sources'][sid]
+    def _calendar(self,s,cid):
+        c=next((c for c in s.get('calendars',[]) if c['id']==cid),None)
+        if not c or cid not in s.get('selected',[]):raise CalendarError('Välj kalendern i Inställningar först.',409)
+        return c
+    def list(self):
+        with self.lock:
+            sources=[]
+            for sid in ['icloud',*self.data['sources']]:
+                s=self._source(sid)
+                if sid=='icloud' and not self.primary.status()['configured']:continue
+                sources.append({'id':sid,'type':s['type'],'name':s['name'],'timezone':s.get('timezone','Europe/Stockholm'),
+                                'selected':s.get('selected',[]),'calendars':[{k:v for k,v in c.items() if k in ['id','name','canCreate','canUpdate','canDelete']} for c in s.get('calendars',[])],
+                                'connected':bool(s.get('refresh_token')) if s['type']=='google' else True,
+                                'account':self.primary.config.get('username','') if sid=='icloud' else ''})
+            return {'sources':sources}
+    def _adapter(self,sid,s,c):
+        if sid=='icloud':return self.primary
+        cache=(sid,c['id'])
+        if cache not in self.adapters:
+            a=ICloudCalendar(self.path.parent/('unused-'+sid+'.json'),server_url=s['url'])
+            a.config={'username':s['username'],'password':s['password'],'timezone':s['timezone'],
+                      'calendar_id':c['id'],'calendar_url':c['url'],'calendar_name':c['name']}
+            a.sign_key=self.data['key']
+            self.adapters[cache]=a
+        return self.adapters[cache]
+    def add(self,body,redirect_uri=None):
+        kind=body.get('type');name=str(body.get('name','')).strip()[:100]
+        if kind not in ('caldav','ha','ics','google'):raise CalendarError('Välj en kalenderleverantör.')
+        try:ZoneInfo(body.get('timezone','Europe/Stockholm'))
+        except (ValueError,KeyError,TypeError):raise CalendarError('Ange en giltig tidszon.')
+        sid=uuid.uuid4().hex
+        s={'type':kind,'name':name or {'caldav':'CalDAV','ha':'Home Assistant','ics':'ICS','google':'Google'}[kind],
+           'timezone':body.get('timezone','Europe/Stockholm'),'selected':[],'calendars':[]}
+        with self.lock:
+            if kind=='google':
+                client_id=str(body.get('clientId','')).strip();secret=str(body.get('clientSecret','')).strip()
+                if not client_id.endswith('.apps.googleusercontent.com') or len(secret)<8:raise CalendarError('Ange Googles OAuth Client ID och Client secret.')
+                s.update(client_id=client_id,client_secret=secret)
+                state=secrets.token_urlsafe(32);verifier=secrets.token_urlsafe(48)
+                challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')
+                self.pending[state]={'source':sid,'config':s,'verifier':verifier,'redirect':redirect_uri,'expires':time.time()+600}
+                url=GOOGLE_AUTH+'?'+urlencode({'client_id':client_id,'redirect_uri':redirect_uri,'response_type':'code','scope':SCOPES,
+                    'access_type':'offline','prompt':'consent','state':state,'code_challenge':challenge,'code_challenge_method':'S256'})
+                return {'authorizationUrl':url,'sourceId':sid}
+            s['url']=valid_url(body.get('url'))
+            if kind!='ics':s['url']=s['url'].rstrip('/')
+            if kind=='caldav':
+                s['username']=str(body.get('username','')).strip();s['password']=str(body.get('password',''))
+                if not s['username'] or not s['password']:raise CalendarError('Ange användarnamn och lösenord.')
+                a=ICloudCalendar(self.path.parent/('unused-'+sid+'.json'),server_url=s['url'])
+                a.config={'username':s['username'],'password':s['password']}
+                found=a._discover()
+                s['calendars']=[dict(id=c['id'],name=c['name'],url=c['url'],canCreate=True,canUpdate=True,canDelete=True) for c in found.values()]
+            elif kind=='ha':
+                s['token']=str(body.get('token','')).strip()
+                if len(s['token'])<20:raise CalendarError('Ange en långlivad åtkomsttoken från Home Assistant.')
+                calendars,_=json_http(s['url']+'/api/calendars',headers={'Authorization':'Bearer '+s['token']})
+                states,_=json_http(s['url']+'/api/states',headers={'Authorization':'Bearer '+s['token']})
+                features={x['entity_id']:x.get('attributes',{}).get('supported_features',0) for x in states}
+                s['calendars']=[{'id':c['entity_id'],'name':c['name'],'canCreate':bool(features.get(c['entity_id'],0)&1),'canUpdate':bool(features.get(c['entity_id'],0)&4),'canDelete':bool(features.get(c['entity_id'],0)&2)} for c in calendars]
+            elif kind=='ics':
+                _,raw,_=http(s['url'])
+                _,ical,_=libraries()
+                ical.Calendar.from_ical(raw) # Validate before storing a secret URL.
+                s['calendars']=[{'id':'feed','name':s['name'],'canCreate':False,'canUpdate':False,'canDelete':False}]
+            if len(s['calendars'])==1:s['selected']=[s['calendars'][0]['id']]
+            self.data['sources'][sid]=s;self._save()
+            return self.list()
+    def google_callback(self,state,code):
+        with self.lock:
+            p=self.pending.pop(state,None)
+            if not p or time.time()>p['expires'] or not code:raise CalendarError('Google-inloggningen har gått ut eller avbrutits. Försök igen.',400)
+            s=p['config']
+            token,_=json_http(GOOGLE_TOKEN,'POST',{'code':code,'client_id':s['client_id'],'client_secret':s['client_secret'],
+                         'redirect_uri':p['redirect'],'grant_type':'authorization_code','code_verifier':p['verifier']},form=True)
+            if not token.get('refresh_token'):raise CalendarError('Google gav ingen beständig åtkomst. Anslut igen och godkänn kalenderåtkomst.',409)
+            s.update(refresh_token=token['refresh_token'],access_token=token['access_token'],expires=time.time()+token.get('expires_in',3600)-60)
+            sid=p['source'];self.data['sources'][sid]=s
+            try:s['calendars']=self._google_calendars(s)
+            except Exception:
+                del self.data['sources'][sid];raise
+            if len(s['calendars'])==1:s['selected']=[s['calendars'][0]['id']]
+            self._save()
+    def _google(self,s,path,method='GET',payload=None,etag=None):
+        if s.get('expires',0)<=time.time():
+            token,_=json_http(GOOGLE_TOKEN,'POST',{'client_id':s['client_id'],'client_secret':s['client_secret'],
+                    'refresh_token':s['refresh_token'],'grant_type':'refresh_token'},form=True)
+            s.update(access_token=token['access_token'],expires=time.time()+token.get('expires_in',3600)-60);self._save()
+        hdr={'Authorization':'Bearer '+s['access_token']}
+        if etag:hdr['If-Match']=etag
+        return json_http(GOOGLE_API+path,method,payload,headers=hdr)[0]
+    def _google_calendars(self,s):
+        result=[];page=None
+        for _ in range(100):
+            d=self._google(s,'/users/me/calendarList?'+urlencode({'maxResults':250,**({'pageToken':page} if page else {})}))
+            for c in d.get('items',[]):
+                writable=c.get('accessRole') in ('owner','writer')
+                result.append({'id':c['id'],'name':c.get('summaryOverride',c.get('summary','Google')),'canCreate':writable,'canUpdate':writable,'canDelete':writable})
+            page=d.get('nextPageToken')
+            if not page:return result
+        raise CalendarError('För många kalendrar i kontot.',422)
+    def configure(self,sid,body):
+        with self.lock:
+            if sid=='icloud':
+                # Keep the existing private configuration and signed references.
+                ids=body.get('selected',[])
+                if not isinstance(ids,list) or len(ids)>1:
+                    raise CalendarError('Välj en iCloud-kalender.')
+                if ids and (ids[0]!=self.primary.status()['calendarId'] or body.get('timezone','Europe/Stockholm')!=self.primary.status()['timezone']):
+                    self.primary.select(ids[0],body.get('timezone','Europe/Stockholm'))
+                self.data['icloud_enabled']=bool(ids);self._save()
+                return self.list()
+            s=self._source(sid);selected=body.get('selected')
+            if not isinstance(selected,list) or not all(isinstance(cid,str) and any(c['id']==cid for c in s['calendars']) for cid in selected):raise CalendarError('Ogiltigt kalenderurval.')
+            s['selected']=list(dict.fromkeys(selected));self._save();return self.list()
+    def remove(self,sid):
+        with self.lock:
+            if sid=='icloud':self.primary.disconnect()
+            else:self.data['sources'].pop(sid,None)
+            self.adapters={k:v for k,v in self.adapters.items() if k[0]!=sid};self._save()
+            return self.list()
+    def _normalize(self,s,start,end,summary,remote,etag='',recurring=False,writable=False):
+        _,ical,_=libraries()
+        root=ical.Calendar();e=ical.Event();e.add('UID',remote);e.add('DTSTART',start);e.add('DTEND',end);e.add('SUMMARY',summary);root.add_component(e)
+        a=ICloudCalendar(self.path.parent/'unused-normalizer.json')
+        a.config={'timezone':s['timezone'],'calendar_id':'normalize'}
+        d=a._serialize(e,root,'https://invalid.example/event',etag)
+        return dict(d,id=remote,recurring=recurring,writable=writable)
+    def _read(self,sid,s,c,first,last):
+        tz=ZoneInfo(s['timezone']);a,b=interval(first,last,tz)
+        if s['type'] in ('icloud','caldav'):
+            return self._adapter(sid,s,c).events(first,last)['events']
+        if s['type']=='google':
+            output=[];page=None
+            for _ in range(100):
+                params={'timeMin':a.isoformat(),'timeMax':b.isoformat(),'singleEvents':'true','maxResults':2500,'timeZone':s['timezone']}
+                if page:params['pageToken']=page
+                result=self._google(s,'/calendars/'+quote(c['id'],safe='')+'/events?'+urlencode(params))
+                for e in result.get('items',[]):
+                    if e.get('status')=='cancelled':continue
+                    def dt(v):return date.fromisoformat(v['date']) if 'date' in v else datetime.fromisoformat(v['dateTime'].replace('Z','+00:00'))
+                    output.append(self._normalize(s,dt(e['start']),dt(e['end']),e.get('summary','(Utan titel)'),e['id'],e.get('etag',''),bool(e.get('recurringEventId')),c['canUpdate'] and bool(e.get('etag')) and not e.get('locked',False)))
+                page=result.get('nextPageToken')
+                if not page:return output
+            raise CalendarError('För många kalenderhändelser.',422)
+        if s['type']=='ha':
+            result,_=json_http(s['url']+'/api/calendars/'+quote(c['id'],safe='')+'?'+urlencode({'start':a.isoformat(),'end':b.isoformat()}),headers={'Authorization':'Bearer '+s['token']})
+            def dt(v):
+                if isinstance(v,dict):v=v.get('dateTime',v.get('date'))
+                return date.fromisoformat(v) if len(v)==10 else datetime.fromisoformat(v.replace('Z','+00:00'))
+            output=[]
+            for e in result:
+                fingerprint=hashlib.sha256(json.dumps(e,sort_keys=True).encode()).hexdigest()
+                remote=json.dumps({'uid':e.get('uid'),'rid':e.get('recurrence_id'),'day':dt(e['start']).isoformat()[:10]},sort_keys=True)
+                writable=bool(e.get('uid')) and (c['canUpdate'] or c['canDelete'])
+                self.ha_cache[(sid,c['id'],remote)]=e
+                output.append(self._normalize(s,dt(e['start']),dt(e['end']),e.get('summary','(Utan titel)'),remote,fingerprint,bool(e.get('recurrence_id')),writable))
+            return output
+        if s['type']=='ics':
+            _,raw,_=http(s['url']);_,ical,rec= libraries();root=ical.Calendar.from_ical(raw)
+            helper=ICloudCalendar(self.path.parent/'unused-normalizer.json');helper.config={'timezone':s['timezone'],'calendar_id':'feed'}
+            events=[]
+            for e in rec.of(root).between(a,b):
+                if str(e.get('STATUS','')).upper()=='CANCELLED':continue
+                d=helper._serialize(e,root,'https://invalid.example/feed','');d['id']=hashlib.sha256((str(e.get('UID'))+str(e.get('RECURRENCE-ID',e.get('DTSTART')))).encode()).hexdigest()
+                events.append(d)
+                if len(events)>2500:raise CalendarError('För många kalenderhändelser.',422)
+            return events
+    def events(self,first,last):
+        with self.lock:
+            interval(first,last,timezone.utc)
+            output=[];errors=[]
+            for source in self.list()['sources']:
+                sid=source['id'];s=self._source(sid)
+                for c in s['calendars']:
+                    if c['id'] not in s['selected']:continue
+                    source_key=sid+':'+c['id']
+                    try:
+                        records=self._read(sid,s,c,first,last)
+                        for record in records:
+                            rid=record['id']
+                            output.append(dict(record,id=self._sign({'source':sid,'calendar':c['id'],'remote':rid}),
+                                   sourceId=sid,calendarId=c['id'],sourceKey=source_key,sourceName=s['name'],calendarName=c['name'],
+                                   canDelete=c['canDelete'] and record.get('writable',False),canUpdate=c['canUpdate'] and record.get('writable',False)))
+                    except Exception as e:
+                        errors.append({'sourceKey':source_key,'name':s['name']+' · '+c['name'],
+                                       'error':str(e) if isinstance(e,CalendarError) else 'Kunde inte hämta kalendern. Kontrollera anslutningen.'})
+            return {'events':output,'errors':errors}
+    def _ha_ws(self,s,command):
+        import websocket
+        parts=urlsplit(s['url'])
+        ws_url=('wss' if parts.scheme=='https' else 'ws')+'://'+parts.netloc+parts.path+'/api/websocket'
+        try:
+            with closing(websocket.create_connection(ws_url,timeout=25,suppress_origin=True)) as ws:
+                if json.loads(ws.recv()).get('type')!='auth_required':raise CalendarError('HA nekade WebSocket-anslutningen.',502)
+                ws.send(json.dumps({'type':'auth','access_token':s['token']}))
+                if json.loads(ws.recv()).get('type')!='auth_ok':raise CalendarError('Kalendern nekade åtkomst. Kontrollera anslutning och behörighet.',403)
+                ws.send(json.dumps(dict(command,id=1)))
+                for _ in range(20):
+                    reply=json.loads(ws.recv())
+                    if reply.get('id')!=1:continue
+                    if not reply.get('success'):
+                        raise CalendarError('HA tillät inte ändringen. Kontrollera kalenderns stöd och behörighet.',409)
+                    return {'saved':True}
+                raise CalendarError('HA skickade inget svar på ändringen.',502)
+        except CalendarError:raise
+        except Exception:raise CalendarError('HA:s kalenderanslutning kunde inte slutföra ändringen. Uppdatera innan du försöker igen.',502)
+
+    def _payload(self,s,item,existing=None):
+        helper=ICloudCalendar(self.path.parent/'unused-normalizer.json');helper.config={'timezone':s['timezone']}
+        component=None
+        if existing:
+            _,ical,_=libraries();component=ical.Event()
+            def parse(value):
+                if isinstance(value,dict):value=value.get('date',value.get('dateTime'))
+                return date.fromisoformat(value) if len(value)==10 else datetime.fromisoformat(value.replace('Z','+00:00'))
+            component.add('DTSTART',parse(existing['start']));component.add('DTEND',parse(existing['end']))
+        start,end=helper._dates(item,component)
+        if isinstance(start,datetime):
+            return {'summary':item['summary'],'start':{'dateTime':start.isoformat(),'timeZone':s['timezone']},'end':{'dateTime':end.isoformat(),'timeZone':s['timezone']}}
+        return {'summary':item['summary'],'start':{'date':start.isoformat()},'end':{'date':end.isoformat()}}
+    def mutate(self,method,item):
+        with self.lock:
+            if method=='POST':sid,cid=item.get('sourceId'),item.get('calendarId');remote=None
+            else:
+                ref=self._decode(item.get('id'));sid,cid,remote=ref['source'],ref['calendar'],ref['remote']
+            s=self._source(sid);c=self._calendar(s,cid)
+            feature={'POST':'canCreate','PUT':'canUpdate','DELETE':'canDelete'}[method]
+            if not c.get(feature):raise CalendarError('Kalendern stöder inte denna ändring. Öppna den hos leverantören.',403)
+            if method!='DELETE':
+                if not isinstance(item.get('summary'),str) or not item['summary'].strip() or len(item['summary'])>512:raise CalendarError('Ange en aktivitet med högst 512 tecken.')
+            if s['type'] in ('icloud','caldav'):
+                adapter=self._adapter(sid,s,c)
+                if method=='POST':return adapter.create(item)
+                if method=='PUT':return adapter.update(remote,item.get('etag',''),item)
+                return adapter.delete(remote,item.get('etag',''))
+            if s['type']=='google':
+                path='/calendars/'+quote(cid,safe='')+'/events'
+                if method=='POST':
+                    try:request_id=str(uuid.UUID(item['requestId']))
+                    except (ValueError,KeyError,TypeError):raise CalendarError('Ogiltig referens för sparningen.')
+                    payload=self._payload(s,item);payload['id']=hashlib.sha256(request_id.encode()).hexdigest()
+                    try:self._google(s,path,'POST',payload)
+                    except CalendarError as e:
+                        if e.status!=409:raise
+                        previous=self._google(s,path+'/'+payload['id'])
+                        if any(previous.get(k)!=payload[k] for k in ('summary','start','end')):raise
+                    return {'saved':True}
+                if not item.get('etag'):raise CalendarError('Uppdatera kalendern innan du ändrar händelsen.',409)
+                payload=None
+                if method=='PUT':
+                    existing=self._google(s,path+'/'+quote(remote,safe=''))
+                    if existing.get('etag')!=item['etag']:raise CalendarError('Händelsen har ändrats. Uppdatera kalendern och försök igen.',409)
+                    payload=self._payload(s,item,existing)
+                self._google(s,path+'/'+quote(remote,safe=''),'PATCH' if method=='PUT' else 'DELETE',payload,etag=item['etag'])
+                return {'saved':True}
+            if s['type']=='ha' and method in ('PUT','DELETE'):
+                try:
+                    ref=json.loads(remote)
+                    if not ref.get('uid'):raise ValueError()
+                    # Re-read the occurrence and reject concurrent edits before
+                    # calling HA. HA has no atomic If-Match for calendar commands.
+                    day=date.fromisoformat(ref['day'])
+                    current=self._read(sid,s,c,day.isoformat(),(day+timedelta(days=1)).isoformat())
+                    event=next((e for e in current if e['id']==remote),None)
+                    if not event or event['etag']!=item.get('etag'):
+                        raise CalendarError('Händelsen har ändrats. Uppdatera kalendern och försök igen.',409)
+                except (ValueError,KeyError,TypeError):raise CalendarError('Händelsen saknar en giltig HA-referens.',409)
+                command={'type':'calendar/event/'+('update' if method=='PUT' else 'delete'),'entity_id':cid,'uid':ref['uid']}
+                if ref.get('rid'):command['recurrence_id']=ref['rid']
+                if method=='PUT':
+                    original=self.ha_cache[(sid,cid,remote)]
+                    payload=self._payload(s,item,original)
+                    command['event']={'summary':payload['summary'],'dtstart':payload['start'].get('date',payload['start'].get('dateTime')),'dtend':payload['end'].get('date',payload['end'].get('dateTime'))}
+                    for field in ('description','location'):
+                        if original.get(field) is not None:command['event'][field]=original[field]
+                return self._ha_ws(s,command)
+            if s['type']=='ha' and method=='POST':
+                payload=self._payload(s,item);start,end=payload['start'],payload['end']
+                data={'entity_id':cid,'summary':payload['summary']}
+                data.update({'start_date':start['date'],'end_date':end['date']} if 'date' in start else {'start_date_time':start['dateTime'],'end_date_time':end['dateTime']})
+                # HA create_event has no idempotency key; cache confirmed requests.
+                request_id=item.get('requestId')
+                if not isinstance(request_id,str):raise CalendarError('Ogiltig referens för sparningen.')
+                receipt=(sid,cid,request_id)
+                fingerprint=hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest()
+                if receipt in self.create_receipts:
+                    if self.create_receipts[receipt]!=fingerprint:raise CalendarError('Sparreferensen används redan.',409)
+                    return {'saved':True,'alreadySaved':True}
+                json_http(s['url']+'/api/services/calendar/create_event','POST',data,headers={'Authorization':'Bearer '+s['token']})
+                self.create_receipts[receipt]=fingerprint
+                return {'saved':True}
+            raise CalendarError('Kalendern är skrivskyddad.',403)
