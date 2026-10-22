@@ -1,5 +1,6 @@
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "The end defaults to one hour after the start unless you choose another end.": "Sluttiden blir en timme efter starttiden om du inte väljer ett annat slut.",
   "Close day view": "Stäng dagsvyn",
   "Event pages": "Sidor med aktiviteter",
   "Previous events": "Föregående aktiviteter",

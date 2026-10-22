@@ -23,7 +23,8 @@ On Windows, use .venv\Scripts\python.exe instead of .venv/bin/python.
 
 - Rename, color and reorder columns.
 - Side-by-side activities, multi-day events with stable widths and multiple participants.
-- Tap a date or a dense day’s “+” button for an enlarged, paged day view instead of scrolling inside cells.
+- Tap a date or a dense day’s “+N” button for an enlarged, paged day view instead of scrolling inside cells.
+- Add events with a separate “+” button even on occupied days. A selected start time defaults to a one-hour event; explicit end times are preserved.
 - Connect iCloud, Google Calendar, Home Assistant, CalDAV and ICS feeds. Display multiple sources together.
 - English by default, with optional Swedish. ISO dates (YYYY-MM-DD), 24-hour or AM/PM time.
 - Swedish public holidays, observances and flag days, with localized names.
@@ -52,6 +53,7 @@ See [home-assistant/README.md](home-assistant/README.md). Online calendars requi
     .venv/bin/python qa-clean-template.py
     .venv/bin/python qa-multiple-calendars.py
     .venv/bin/python qa-settings-layout.py
+    .venv/bin/python qa-event-entry.py
 
 Browser checks use a separate temporary Brave profile and synthetic calendar data. Set BRAVE_BINARY when Brave is not installed in its default macOS location.
 
