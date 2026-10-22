@@ -22,7 +22,8 @@ On Windows, use .venv\Scripts\python.exe instead of .venv/bin/python.
 ## Features
 
 - Rename, color and reorder columns.
-- Side-by-side activities, multi-day events and multiple participants.
+- Side-by-side activities, multi-day events with stable widths and multiple participants.
+- Tap a date or a dense day’s “+” button for an enlarged, paged day view instead of scrolling inside cells.
 - Connect iCloud, Google Calendar, Home Assistant, CalDAV and ICS feeds. Display multiple sources together.
 - English by default, with optional Swedish. ISO dates (YYYY-MM-DD), 24-hour or AM/PM time.
 - Swedish public holidays, observances and flag days, with localized names.

@@ -1,5 +1,17 @@
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "Close day view": "Stäng dagsvyn",
+  "Event pages": "Sidor med aktiviteter",
+  "Previous events": "Föregående aktiviteter",
+  "Next events": "Nästa aktiviteter",
+  "Show all events for ": "Visa alla aktiviteter för ",
+  ". More events: ": ". Fler aktiviteter: ",
+  " events": " aktiviteter",
+  " · Select an event to edit": " · Välj en aktivitet för att redigera",
+  "No events this day.": "Inga aktiviteter den här dagen.",
+  "All day": "Hela dagen",
+  "+ New event": "+ Ny aktivitet",
+
   "/ family": "/ familjen",
   "Monthly planner": "Månadsplanerare",
   "Theme": "Tema",

@@ -56,7 +56,25 @@ dialog{width:min(480px,calc(100vw - 32px));max-height:90dvh;padding:0;border:1px
 .event.range-start{border-radius:5px 5px 0 0}.event.range-end{border-radius:0 0 5px 5px}.range-mark{font-size:10px;flex-shrink:0;opacity:.85}
 .cell.multiple .event{gap:3px;padding-left:4px;padding-right:3px;font-size:10px;border-left-width:2px}.cell.multiple .time{font-size:9px}.cell.multiple .event-title{min-width:0}
 .event-content{min-width:0;overflow:hidden;display:flex;align-items:center;gap:5px}.cell.multiple .event-content{gap:3px}
-.cell.crowded{grid-template-columns:repeat(var(--lanes),minmax(70px,1fr));overflow-x:auto}
+.cell.crowded{overflow:hidden}
+.more-events{width:100%;min-width:0;height:100%;border:1px solid var(--border);border-radius:5px;background:var(--control);color:var(--accent);font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;padding:0 2px;align-self:center}
+.more-events:hover{background:var(--hover)}
+.day-open{width:100%;border:0;background:transparent;color:inherit;padding:0;text-align:left;cursor:pointer;font-family:inherit}
+.day-open:hover{background:var(--hover)}.day-open:focus-visible,.more-events:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#day-detail{width:min(850px,calc(100vw - 24px));overflow:hidden}
+#day-detail[open]{display:flex;flex-direction:column}
+#day-detail .dialog-head{padding:18px 20px 10px;flex-shrink:0}
+#day-detail .dialog-sub{margin:0 20px 14px;flex-shrink:0}
+.day-events{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 20px;min-height:0}
+.day-event{height:108px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:6px;padding:10px 12px;border:1px solid var(--border);border-left:4px solid var(--person);border-radius:10px;background:color-mix(in srgb,var(--person) 10%,var(--surface));color:var(--text);text-align:left;cursor:pointer;font-family:inherit;min-width:0}
+.day-event:hover{filter:brightness(.96)}
+.day-event strong{font-size:15px;line-height:1.25;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.day-event small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-event .day-participants{color:var(--person);font-weight:600}
+.day-empty{grid-column:1/-1;color:var(--muted);padding:20px 0;margin:0}
+.day-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;flex-shrink:0}
+.day-pages{display:flex;align-items:center;gap:8px}.day-pages .icon{width:36px;height:36px}.day-page-label{font-size:12px;color:var(--muted)}
+@media(max-width:600px){.day-events{grid-template-columns:minmax(0,1fr)}.day-footer{gap:6px}.day-footer .add{font-size:12px;padding:10px}.day-pages{gap:3px}}
 .touch .cell.multiple .event-content{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px}
 .touch .cell.multiple .event-title{font-size:11px;max-width:100%}.touch .cell.multiple .time{font-size:10px}
 .touch .event.range{max-height:none}.time-help{font-size:11px;font-weight:400;color:var(--muted);margin:0;grid-column:1/-1}
@@ -575,6 +593,12 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
 </section>
 <footer class="footer"><p id="storage-note">Local calendar · Saved only in this browser<span class="hint"> · Tap a cell to plan</span></p><span class="shared-legend"><span aria-hidden="true">↔</span> Multiple participants</span><div class="footer-actions"><button class="text-button" id="fullscreen">Fullscreen</button><button class="text-button" id="reset">Reset calendar</button></div></footer>
 </main>
+<dialog id="day-detail" aria-labelledby="day-title" aria-describedby="day-summary">
+<div class="dialog-head"><h2 id="day-title"></h2><button type="button" class="close" id="close-day" aria-label="Close day view">×</button></div>
+<p class="dialog-sub" id="day-summary"></p>
+<div class="day-events" id="day-events"></div>
+<div class="day-footer"><button type="button" class="add" id="day-add">+ New event</button><nav class="day-pages" aria-label="Event pages"><button type="button" class="icon" id="day-prev" aria-label="Previous events">‹</button><span class="day-page-label" id="day-page" aria-live="polite"></span><button type="button" class="icon" id="day-next" aria-label="Next events">›</button></nav></div>
+</dialog>
 <dialog id="editor" aria-labelledby="editor-title">
 <div class="dialog-head"><h2 id="editor-title">New event</h2><button class="close" id="close" aria-label="Close">×</button></div><p class="dialog-sub" id="editor-sub">A little plan to look forward to.</p>
 <div class="dialog-content"><button type="button" class="same-day hidden" id="another">+ New event on the same day</button>
@@ -678,6 +702,18 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
 <script>
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "Close day view": "Stäng dagsvyn",
+  "Event pages": "Sidor med aktiviteter",
+  "Previous events": "Föregående aktiviteter",
+  "Next events": "Nästa aktiviteter",
+  "Show all events for ": "Visa alla aktiviteter för ",
+  ". More events: ": ". Fler aktiviteter: ",
+  " events": " aktiviteter",
+  " · Select an event to edit": " · Välj en aktivitet för att redigera",
+  "No events this day.": "Inga aktiviteter den här dagen.",
+  "All day": "Hela dagen",
+  "+ New event": "+ Ny aktivitet",
+
   "/ family": "/ familjen",
   "Monthly planner": "Månadsplanerare",
   "Theme": "Tema",
@@ -1311,13 +1347,18 @@ function rangeTone(id){
 }
 function cellContent(cell,date,p,groups){
  const g=groups.find(g=>g.start<=date&&g.end>=date);
- // Retain the interval ordering, but reserve width only for events present today.
+ // Keep the same tracks throughout an overlapping group, including across month boundaries.
  const visibleSlots=g?g.slots.filter(s=>s.event.date<=date&&endDateOf(s.event)>=date).sort((a,b)=>a.lane-b.lane):[];
- const lanes=Math.max(1,visibleSlots.length);
- cell.style.setProperty('--lanes',lanes);if(lanes>1)cell.classList.add('multiple');if(lanes>3)cell.classList.add('crowded');
+ const lanes=Math.max(1,Math.min(3,g?.lanes||1)),overflow=g?.lanes>3;
+ const hidden=overflow?visibleSlots.filter(s=>s.lane>=2).length:0;
+ cell.style.setProperty('--lanes',lanes);if(lanes>1)cell.classList.add('multiple');if(hidden)cell.classList.add('crowded');
  for(let lane=0;lane<lanes;lane++){
-  const slot=visibleSlots[lane],b=document.createElement('button');
-  b.type='button';b.dataset.lane=lane;
+  const b=document.createElement('button');b.type='button';b.dataset.lane=lane;
+  if(overflow&&lane===2&&hidden){
+   b.className='more-events';b.textContent='+'+hidden;b.setAttribute('aria-label',msg("Show all events for ")+date+msg(". More events: ")+hidden);
+   b.addEventListener('click',()=>openDay(date,p.id));cell.append(b);continue;
+  }
+  const slot=visibleSlots.find(s=>s.lane===lane);
   if(!slot){
    b.className='empty-slot';b.setAttribute('aria-label',msg("Add an event for ")+p.name+', '+dateLabel(date));b.addEventListener('click',()=>openCell(date,p.id));cell.append(b);continue;
   }
@@ -1335,7 +1376,7 @@ function cellContent(cell,date,p,groups){
   if(shared&&(!range||date===firstVisible)){const link=document.createElement('span');link.className='shared-mark';link.setAttribute('aria-hidden','true');link.textContent='↔';content.append(link)}
   if(range&&(date===firstVisible||date===endDateOf(e))){const mark=document.createElement('span');mark.className='range-mark';mark.setAttribute('aria-hidden','true');mark.textContent=date===endDateOf(e)?'↳':date===e.date?'↓':'↑';content.append(mark)}
   b.append(content);
-  b.addEventListener('click',()=>openEvent(e,date,p.id));cell.append(b);
+  b.addEventListener('click',()=>hidden?openDay(date,p.id):openEvent(e,date,p.id));cell.append(b);
  }
 }
 
@@ -1409,7 +1450,7 @@ function render(){
  for(let day=1;day<=days;day++){
   const date=new Date(month.getFullYear(),month.getMonth(),day),dateKey=key(date),tr=document.createElement('tr'),th=document.createElement('th');
   if(date.getDay()===0||date.getDay()===6)tr.classList.add('weekend');if(date.getDay()===1)tr.classList.add('monday');if(dateKey===todayKey)tr.classList.add('is-today');
-  th.scope='row';const label=document.createElement('div');label.className='day-label';
+  th.scope='row';const label=document.createElement('button');label.type='button';label.className='day-label day-open';label.setAttribute('aria-label',msg('Show all events for ')+dateKey);label.addEventListener('click',()=>openDay(dateKey));
   const n=document.createElement('span');n.className='date-number';n.textContent=dateKey;const w=document.createElement('span');w.className='weekday';w.textContent=date.toLocaleDateString(locale(),{weekday:'short'}).replace('.','');
   const special=specialDates.get(dateKey),isHoliday=date.getDay()===0||!!special?.holiday;
   if(isHoliday)tr.classList.add('public-holiday');
@@ -1428,8 +1469,44 @@ function render(){
   });$('days').append(tr);
  }
  $('prev').disabled=month.getFullYear()<=2000&&month.getMonth()===0;$('next').disabled=month.getFullYear()>=2100&&month.getMonth()===11;
- updateCalendarStatus();queueOnlineRefresh();requestAnimationFrame(fit);
+ updateCalendarStatus();queueOnlineRefresh();if($('day-detail').open)renderDay();requestAnimationFrame(fit);
 }
+// A paged, enlarged day view keeps dense dates usable without scrolling cells.
+let detailDate='',detailPerson=null,detailPage=0;
+function dayPageSize(){
+ const columns=innerWidth>600?2:1;
+ return Math.max(1,Math.min(3,Math.floor((innerHeight*.9-185)/118)))*columns;
+}
+function openDay(date,person=null){
+ detailDate=date;detailPerson=person;detailPage=0;renderDay();
+ if(!$('day-detail').open)$('day-detail').showModal();
+}
+function renderDay(){
+ const items=calendarEvents().filter(e=>e.date<=detailDate&&endDateOf(e)>=detailDate).sort((a,b)=>(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title)||a.id.localeCompare(b.id));
+ const size=dayPageSize(),pages=Math.max(1,Math.ceil(items.length/size));
+ detailPage=Math.max(0,Math.min(detailPage,pages-1));
+ $('day-title').textContent=detailDate;
+ $('day-summary').textContent=makeDate(detailDate).toLocaleDateString(locale(),{weekday:'long'})+' · '+items.length+msg(' events')+msg(' · Select an event to edit');
+ $('day-events').replaceChildren();
+ if(!items.length){const empty=document.createElement('p');empty.className='day-empty';empty.textContent=msg('No events this day.');$('day-events').append(empty)}
+ for(const e of items.slice(detailPage*size,(detailPage+1)*size)){
+  const ids=participants(e),person=people.find(p=>p.id===ids[0]),b=document.createElement('button');
+  b.type='button';b.className='day-event';b.dataset.eventId=e.id;b.style.setProperty('--person',ids.length>1?sharedColor:person.color);
+  b.setAttribute('aria-label',describe(e)+msg('. Edit event.'));b.title=describe(e);
+  const title=document.createElement('strong');title.textContent=e.title;
+  const when=document.createElement('small');when.textContent=(e.date!==endDateOf(e)?e.date+' – '+endDateOf(e)+' · ':'')+((e.time||e.end)?formatTime(e.time||'00:00')+(e.end?' – '+formatTime(e.end):''):msg('All day'));
+  const names=document.createElement('small');names.className='day-participants';names.textContent=(ids.length>1?'↔ ':'')+ids.map(id=>people.find(p=>p.id===id).name).join(', ');
+  b.append(title,when,names);b.addEventListener('click',()=>openEvent(e,detailDate,ids.includes(detailPerson)?detailPerson:ids[0]));$('day-events').append(b);
+ }
+ $('day-prev').disabled=detailPage===0;$('day-next').disabled=detailPage===pages-1;
+ $('day-page').textContent=(detailPage+1)+' / '+pages;
+}
+$('close-day').addEventListener('click',()=>$('day-detail').close());
+$('day-detail').addEventListener('click',e=>{if(e.target===$('day-detail')){const r=$('day-detail').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('day-detail').close()}});
+$('day-prev').addEventListener('click',()=>{detailPage--;renderDay()});
+$('day-next').addEventListener('click',()=>{detailPage++;renderDay()});
+$('day-add').addEventListener('click',()=>openCell(detailDate,people.some(p=>p.id===detailPerson)?detailPerson:preferredPerson()));
+addEventListener('resize',()=>{if($('day-detail').open)renderDay()});
 function renderPersonOptions(){
  $('person-options').replaceChildren();
  people.forEach(p=>{
