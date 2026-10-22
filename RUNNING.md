@@ -1,11 +1,11 @@
-# Körning
+# Running Family Planner
 
-Se README.md för installation och ONLINE-CALENDAR.md för onlinekalendrar.
-Standardadress: http://127.0.0.1:8086/.
+See README.md for installation and ONLINE-CALENDAR.md for calendar connections.
 
-Nätverksåtkomst kräver HTTPS, HTTP-inloggning och uttryckligt värdnamn enligt serverns --help.
-Inga kontouppgifter levereras med projektet.
+Default address: http://127.0.0.1:8086/.
 
-En ren installation börjar utan aktiviteter, kontokopplingar, väderstad och HA-givare.
-Kolumnerna är Gemensamt samt Person 1–5.
-Tidigare lokala förslagsdata ersätts av denna rena mall när sidan laddas om; sparade data i den nya versionen behålls.
+Network access requires HTTPS, HTTP authentication and an explicitly allowed hostname. Run serve.py --help for details. No account credentials are included.
+
+A fresh installation has no events, connected accounts, weather location or HA sensor. Its columns are Shared and Person 1–5. English is the default interface language.
+
+Legacy proposal data is removed when the clean template is first loaded. New data saved in the current version is retained. Upgrading older settings to the English-first release preserves events and custom columns; only the initial interface language and the untouched generic shared-column label are migrated.

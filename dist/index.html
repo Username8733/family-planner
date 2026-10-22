@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -560,123 +560,600 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
 </head>
 <body>
 <main class="app" id="app">
-<header class="top"><div class="header-identity"><div class="brand"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Family Planner</div><span class="badge">Månadsplanerare</span></div><div class="appearance-controls"><label class="theme-control" for="visual-theme">Tema<select id="visual-theme" aria-label="Färgtema"></select></label><button type="button" class="view dark-toggle" id="dark-mode" role="switch" aria-checked="false" aria-label="Mörkt läge"><span class="switch" aria-hidden="true"></span>Mörkt läge</button></div></header>
+<header class="top"><div class="header-identity"><div class="brand"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Family Planner</div><span class="badge">Monthly planner</span></div><div class="appearance-controls"><label class="theme-control" for="visual-theme">Theme<select id="visual-theme" aria-label="Color theme"></select></label><button type="button" class="view dark-toggle" id="dark-mode" role="switch" aria-checked="false" aria-label="Dark mode"><span class="switch" aria-hidden="true"></span>Dark mode</button></div></header>
 <section class="heading" aria-label="Kalenderns kontroller">
-<div class="month-group"><div><p class="eyebrow">Allas planer. Samma plats.</p><h1 id="month-title"></h1></div><nav class="navigation" aria-label="Välj månad"><button class="icon" id="prev" aria-label="Föregående månad">‹</button><button class="today" id="today">Idag</button><button class="icon" id="next" aria-label="Nästa månad">›</button></nav></div>
-<section id="weather" class="weather-strip" aria-label="Dagens väder och aktuell utetemperatur">
-<button type="button" id="weather-content" class="forecast-card" aria-live="polite">Välj väderstad i Inställningar</button>
-<button type="button" id="outdoor-content" class="outdoor-card" aria-live="polite"><span class="weather-kicker">Utomhus just nu</span><strong class="outdoor-value">—</strong><small>Välj väderstad eller HA-givare</small></button>
+<div class="month-group"><div><p class="eyebrow">Everyone's plans. One place.</p><h1 id="month-title"></h1></div><nav class="navigation" aria-label="Choose month"><button class="icon" id="prev" aria-label="Previous month">‹</button><button class="today" id="today">Today</button><button class="icon" id="next" aria-label="Next month">›</button></nav></div>
+<section id="weather" class="weather-strip" aria-label="Today's weather and current outdoor temperature">
+<button type="button" id="weather-content" class="forecast-card" aria-live="polite">Choose a weather city in Settings</button>
+<button type="button" id="outdoor-content" class="outdoor-card" aria-live="polite"><span class="weather-kicker">Outside right now</span><strong class="outdoor-value">—</strong><small>Choose a weather city or HA sensor</small></button>
 </section>
-<div class="tools"><button class="view" id="columns">Inställningar</button><button class="view" id="touch" aria-pressed="false"><span class="switch" aria-hidden="true"></span>Större rader</button><button class="add" id="add"><span class="plus" aria-hidden="true">+</span>Ny aktivitet</button></div>
+<div class="tools"><button class="view" id="columns">Settings</button><button class="view" id="touch" aria-pressed="false"><span class="switch" aria-hidden="true"></span>Larger rows</button><button class="add" id="add"><span class="plus" aria-hidden="true">+</span>New event</button></div>
 </section>
 
-<section class="calendar" id="calendar" aria-label="Familjens månadsöversikt">
+<section class="calendar" id="calendar" aria-label="Family month overview">
 <table id="table"><caption id="caption"></caption><thead><tr id="people"></tr></thead><tbody id="days"></tbody></table>
 </section>
-<footer class="footer"><p id="storage-note">Lokal kalender · Sparas bara i denna webbläsare<span class="hint"> · Tryck i en ruta för att planera</span></p><span class="shared-legend"><span aria-hidden="true">↔</span> Flera deltagare</span><div class="footer-actions"><button class="text-button" id="fullscreen">Helskärm</button><button class="text-button" id="reset">Återställ kalender</button></div></footer>
+<footer class="footer"><p id="storage-note">Local calendar · Saved only in this browser<span class="hint"> · Tap a cell to plan</span></p><span class="shared-legend"><span aria-hidden="true">↔</span> Multiple participants</span><div class="footer-actions"><button class="text-button" id="fullscreen">Fullscreen</button><button class="text-button" id="reset">Reset calendar</button></div></footer>
 </main>
 <dialog id="editor" aria-labelledby="editor-title">
-<div class="dialog-head"><h2 id="editor-title">Ny aktivitet</h2><button class="close" id="close" aria-label="Stäng">×</button></div><p class="dialog-sub" id="editor-sub">En liten plan att se fram emot.</p>
-<div class="dialog-content"><button type="button" class="same-day hidden" id="another">+ Ny aktivitet samma dag</button>
+<div class="dialog-head"><h2 id="editor-title">New event</h2><button class="close" id="close" aria-label="Close">×</button></div><p class="dialog-sub" id="editor-sub">A little plan to look forward to.</p>
+<div class="dialog-content"><button type="button" class="same-day hidden" id="another">+ New event on the same day</button>
 <form id="event-form">
-<label class="span2">Spara i<select id="event-source"><option value="local">Lokal kalender</option><option value="icloud">iCloud</option></select></label><p class="notice span2" id="event-source-note"></p><p class="form-error span2 hidden" id="online-event-error" role="alert"></p>
-<label class="span2">Aktivitet<input id="title" maxlength="80" required autocomplete="off" placeholder="Till exempel träning eller familjemiddag"></label>
-<fieldset class="span2 person-picker" id="person"><legend>Kopplad till</legend><div id="person-options"></div><p id="person-error" class="form-error hidden" role="alert">Välj minst en kolumn.</p></fieldset><label>Från datum<span class="input-picker"><input id="date" type="text" inputmode="text" maxlength="10" pattern="(20[0-9]{2}|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])" placeholder="YYYY-MM-DD" autocomplete="off" aria-describedby="date-help" required><button type="button" class="picker-trigger" id="pick-date" aria-label="Välj startdatum" aria-haspopup="dialog">Välj</button></span></label><label>Till och med<span class="input-picker"><input id="end-date" type="text" inputmode="text" maxlength="10" pattern="(20[0-9]{2}|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])" placeholder="YYYY-MM-DD" autocomplete="off" aria-describedby="date-help" required><button type="button" class="picker-trigger" id="pick-end-date" aria-label="Välj slutdatum" aria-haspopup="dialog">Välj</button></span></label>
-<p class="time-help" id="date-help">Datum: YYYY-MM-DD. Slutdatum ingår.</p><label>Starttid, valfritt<span class="input-picker"><input id="time" type="text" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="08:00" aria-describedby="time-help" autocomplete="off"><button type="button" class="picker-trigger" id="pick-time" aria-label="Välj starttid" aria-haspopup="dialog">Välj</button></span></label><label>Sluttid, valfritt<span class="input-picker"><input id="end" type="text" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="17:00" aria-describedby="time-help" autocomplete="off"><button type="button" class="picker-trigger" id="pick-end" aria-label="Välj sluttid" aria-haspopup="dialog">Välj</button></span></label><p class="time-help" id="time-help">24-timmarsformat. Skriv t.ex. 1730 → 17:30. Tomma tider = heldag.</p>
-<div class="span2 form-actions"><button class="delete hidden" id="delete" type="button">Ta bort aktivitet</button><span id="new-note" class="notice">Ny aktivitet</span><button class="add" id="save-event" type="submit">Spara aktivitet</button></div>
-</form><p class="notice" id="editor-storage-note">Lokala aktiviteter sparas bara i denna webbläsare.</p></div>
+<label class="span2">Save to<select id="event-source"><option value="local">Local calendar</option><option value="icloud">iCloud</option></select></label><p class="notice span2" id="event-source-note"></p><p class="form-error span2 hidden" id="online-event-error" role="alert"></p>
+<label class="span2">Event<input id="title" maxlength="80" required autocomplete="off" placeholder="For example, training or family dinner"></label>
+<fieldset class="span2 person-picker" id="person"><legend>Participants</legend><div id="person-options"></div><p id="person-error" class="form-error hidden" role="alert">Select at least one column.</p></fieldset><label>Start date<span class="input-picker"><input id="date" type="text" inputmode="text" maxlength="10" pattern="(20[0-9]{2}|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])" placeholder="YYYY-MM-DD" autocomplete="off" aria-describedby="date-help" required><button type="button" class="picker-trigger" id="pick-date" aria-label="Choose start date" aria-haspopup="dialog">Choose</button></span></label><label>Through date<span class="input-picker"><input id="end-date" type="text" inputmode="text" maxlength="10" pattern="(20[0-9]{2}|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])" placeholder="YYYY-MM-DD" autocomplete="off" aria-describedby="date-help" required><button type="button" class="picker-trigger" id="pick-end-date" aria-label="Choose end date" aria-haspopup="dialog">Choose</button></span></label>
+<p class="time-help" id="date-help">Dates: YYYY-MM-DD. End date is inclusive.</p><label>Start time, optional<span class="input-picker"><input id="time" type="text" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="08:00" aria-describedby="time-help" autocomplete="off"><button type="button" class="picker-trigger" id="pick-time" aria-label="Choose start time" aria-haspopup="dialog">Choose</button></span></label><label>End time, optional<span class="input-picker"><input id="end" type="text" inputmode="numeric" maxlength="5" pattern="([01][0-9]|2[0-3]):[0-5][0-9]" placeholder="17:00" aria-describedby="time-help" autocomplete="off"><button type="button" class="picker-trigger" id="pick-end" aria-label="Choose end time" aria-haspopup="dialog">Choose</button></span></label><p class="time-help" id="time-help">24-hour format. Type e.g. 1730 → 17:30. Leave times blank for all day.</p>
+<div class="span2 form-actions"><button class="delete hidden" id="delete" type="button">Delete event</button><span id="new-note" class="notice">New event</span><button class="add" id="save-event" type="submit">Save event</button></div>
+</form><p class="notice" id="editor-storage-note">Local events are saved only in this browser.</p></div>
 </dialog>
 
 <dialog id="column-editor" aria-labelledby="column-title">
- <div class="dialog-head"><h2 id="column-title">Inställningar</h2><button type="button" class="close" id="close-columns" aria-label="Stäng inställningar">×</button></div>
- <p class="dialog-sub">Anpassa tid, väder och familjens kolumner.</p>
+ <div class="dialog-head"><h2 id="column-title">Settings</h2><button type="button" class="close" id="close-columns" aria-label="Close settings">×</button></div>
+ <p class="dialog-sub">Customize language, time, weather and your family's columns.</p>
  <div class="dialog-content">
-  <section class="settings-section" aria-labelledby="online-title"><h3 id="online-title">Kalenderkälla</h3>
-<label>Visa kalender<select id="setting-calendar-mode"><option value="local">Lokal kalender</option><option value="icloud">Onlinekalendrar</option><option value="mixed">Onlinekalendrar och lokala aktiviteter</option></select></label>
-<p class="notice">Person 5 - Dans visas hos Person 5. Person 5, Person 4 - Bio visas hos båda som en gemensam händelse. Namn matchas mot kolumnerna utan hänsyn till stora/små bokstäver.</p>
-<label class="online-field">Händelser utan matchande namn<select id="setting-online-fallback"></select></label>
-<p class="notice">Spara inställningar aktiverar valt visningsläge och vald kalender. Befintliga lokala aktiviteter behålls. Redigering av en återkommande händelse gäller bara det valda tillfället.</p></section>
+  <section class="settings-section" aria-labelledby="online-title"><h3 id="online-title">Calendar source</h3>
+<label>Calendar view<select id="setting-calendar-mode"><option value="local">Local calendar</option><option value="icloud">Online calendars</option><option value="mixed">Online calendars and local events</option></select></label>
+<p class="notice">Person 5 - Dance appears in Person 5's column. Person 5, Person 4 - Cinema appears in both as one shared event. Names match column names without case sensitivity.</p>
+<label class="online-field">Events without matching names<select id="setting-online-fallback"></select></label>
+<p class="notice">Save settings to activate the selected view and calendars. Existing local events are kept. Editing a recurring event changes only that occurrence.</p></section>
 
-<section class="settings-section" aria-labelledby="sources-title"><h3 id="sources-title">Onlinekalendrar</h3>
-<p class="notice">Välj vilka kalendrar som ska visas. Anslutning och bortkoppling gäller direkt för servern. Kalenderurvalet sparas med Spara inställningar.</p>
+<section class="settings-section" aria-labelledby="sources-title"><h3 id="sources-title">Online calendars</h3>
+<p class="notice">Choose which calendars to show. Connecting and disconnecting take effect immediately on the server. Save settings to apply your calendar selection.</p>
 <div id="calendar-sources" class="calendar-sources"></div>
-<details id="icloud-connection-panel" class="online-field"><summary>iCloud-anslutning och kalender</summary><p class="notice" id="online-server-status" role="status"></p>
-<div id="icloud-login"><div class="settings-grid online-field"><label>Apple-ID<input id="icloud-user" type="email" autocomplete="username" placeholder="namn@icloud.com"></label><label>Appspecifikt lösenord<input id="icloud-password" type="password" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx"></label></div>
-<div class="backup-actions"><button type="button" class="today" id="connect-icloud">Anslut iCloud</button><button type="button" class="text-button" id="disconnect-icloud">Koppla från</button></div>
-<p class="notice">Anslut/Koppla från gäller direkt för servern. Använd ett <a href="https://support.apple.com/sv-se/102654" target="_blank" rel="noopener">appspecifikt Apple-lösenord</a>. Inloggningen sparas enbart på servern och ingår inte i exporten.</p></div>
-<label class="online-field">iCloud-kalender<select id="setting-online-calendar"><option value="">Välj kalender efter anslutning</option></select></label>
-<label class="online-field">Kalenderns tidszon<input id="setting-online-timezone" value="Europe/Stockholm" autocomplete="off" placeholder="Europe/Stockholm"></label>
-<div class="backup-actions online-field"><button type="button" class="today" id="refresh-online">Uppdatera nu</button><span class="notice" id="online-sync-status" role="status"></span></div>
+<details id="icloud-connection-panel" class="online-field"><summary>iCloud connection and calendar</summary><p class="notice" id="online-server-status" role="status"></p>
+<div id="icloud-login"><div class="settings-grid online-field"><label>Apple ID<input id="icloud-user" type="email" autocomplete="username" placeholder="namn@icloud.com"></label><label>App-specific password<input id="icloud-password" type="password" autocomplete="off" placeholder="xxxx-xxxx-xxxx-xxxx"></label></div>
+<div class="backup-actions"><button type="button" class="today" id="connect-icloud">Connect iCloud</button><button type="button" class="text-button" id="disconnect-icloud">Disconnect</button></div>
+<p class="notice">Connecting and disconnecting take effect immediately on the server. Use an <a href="https://support.apple.com/sv-se/102654" target="_blank" rel="noopener">Apple app-specific password</a>. Credentials are stored only on the server and are excluded from exports.</p></div>
+<label class="online-field">iCloud calendar<select id="setting-online-calendar"><option value="">Select a calendar after connecting</option></select></label>
+<label class="online-field">Calendar time zone<input id="setting-online-timezone" value="Europe/Stockholm" autocomplete="off" placeholder="Europe/Stockholm"></label>
+<div class="backup-actions online-field"><button type="button" class="today" id="refresh-online">Refresh now</button><span class="notice" id="online-sync-status" role="status"></span></div>
 </details>
-<details class="online-field" id="add-source-panel"><summary>Lägg till kalenderkälla</summary>
-<div class="settings-grid online-field"><label>Leverantör<select id="source-type"><option value="google">Google Kalender</option><option value="ha">Home Assistant</option><option value="caldav">CalDAV (Nextcloud, Fastmail med flera)</option><option value="ics">ICS / iCalendar-länk (läsning)</option></select></label>
-<label>Namn<input id="source-name" maxlength="100" autocomplete="off" placeholder="Till exempel Familj"></label></div>
-<div id="source-url-row" class="online-field"><label>Serveradress eller kalenderlänk<input id="source-url" type="url" autocomplete="off" placeholder="https://"></label></div>
-<div id="source-caldav-fields" class="settings-grid online-field"><label>Användarnamn<input id="source-user" autocomplete="off"></label><label>Lösenord eller applösenord<input id="source-password" type="password" autocomplete="off"></label></div>
-<div id="source-ha-fields" class="online-field"><label>Långlivad åtkomsttoken<input id="source-token" type="password" autocomplete="off"></label><p class="notice">Skapa en token i din HA-profil. Tillgängliga åtgärder följer kalenderns stöd och dina behörigheter i HA.</p></div>
+<details class="online-field" id="add-source-panel"><summary>Add calendar source</summary>
+<div class="settings-grid online-field"><label>Provider<select id="source-type"><option value="google">Google Calendar</option><option value="ha">Home Assistant</option><option value="caldav">CalDAV (Nextcloud, Fastmail and others)</option><option value="ics">ICS / iCalendar link (read only)</option></select></label>
+<label>Name<input id="source-name" maxlength="100" autocomplete="off" placeholder="For example, Family"></label></div>
+<div id="source-url-row" class="online-field"><label>Server address or calendar link<input id="source-url" type="url" autocomplete="off" placeholder="https://"></label></div>
+<div id="source-caldav-fields" class="settings-grid online-field"><label>Username<input id="source-user" autocomplete="off"></label><label>Password or app password<input id="source-password" type="password" autocomplete="off"></label></div>
+<div id="source-ha-fields" class="online-field"><label>Long-lived access token<input id="source-token" type="password" autocomplete="off"></label><p class="notice">Create a token in your HA profile. Available actions depend on the calendar and your HA permissions.</p></div>
 <div id="source-google-fields" class="online-field"><div class="settings-grid"><label>Google OAuth Client ID<input id="google-client-id" autocomplete="off" placeholder="…apps.googleusercontent.com"></label><label>Client secret<input id="google-client-secret" type="password" autocomplete="off"></label></div>
-<p class="notice">Aktivera Calendar API i Google Cloud och skapa en OAuth-klient för Desktop app vid lokal körning. För en publicerad tjänst används en Web application-klient med nedanstående returadress.</p>
-<p class="notice" id="google-redirect"></p><a id="google-authorize" class="today hidden" target="_blank" rel="noopener noreferrer">Fortsätt till Google</a></div>
-<label class="online-field">Tidszon<input id="source-timezone" value="Europe/Stockholm" autocomplete="off"></label>
-<button type="button" id="connect-source" class="today online-field">Anslut kalenderkälla</button>
+<p class="notice">Enable Calendar API in Google Cloud and create a Desktop app OAuth client for local use. For a hosted service, use a Web application client with the redirect URI shown below.</p>
+<p class="notice" id="google-redirect"></p><a id="google-authorize" class="today hidden" target="_blank" rel="noopener noreferrer">Continue to Google</a></div>
+<label class="online-field">Time zone<input id="source-timezone" value="Europe/Stockholm" autocomplete="off"></label>
+<button type="button" id="connect-source" class="today online-field">Connect calendar source</button>
 <p id="source-status" class="notice" role="status"></p>
 </details>
-<button type="button" id="reload-sources" class="text-button online-field">Hämta kalenderkällor</button>
+<button type="button" id="reload-sources" class="text-button online-field">Reload calendar sources</button>
 </section>
-<section class="settings-section" aria-labelledby="general-title"><h3 id="general-title">Språk, tid och väder</h3><label class="online-field">Språk / Language<select id="setting-language"><option value="sv">Svenska</option><option value="en">English</option></select></label>
-<div class="settings-grid"><label>Tidsformat<select id="setting-time"><option value="24h">24 timmar · 17:30</option><option value="12h">AM/PM · 05:30 PM</option></select></label>
-<label>Temperatur<select id="setting-unit"><option value="celsius">Celsius · °C</option><option value="fahrenheit">Fahrenheit · °F</option></select></label></div>
-<label>Stad för väderprognosen<span class="city-search"><input id="weather-city" maxlength="100" autocomplete="off" placeholder="Sök stad, till exempel Stockholm"><button type="button" class="today" id="search-city">Sök</button></span></label>
-<p id="city-status" class="notice" role="status"></p><div id="city-results" class="city-results" role="group" aria-label="Välj väderstad"></div>
-<button type="button" class="text-button" id="clear-city">Ta bort väderstad</button>
-<div class="settings-grid temperature-settings"><label>Källa för aktuell utetemperatur<select id="setting-temperature-source"><option value="weather">Vädertjänsten</option><option value="ha">Temperaturgivare i Home Assistant</option></select></label><label>HA-givare utomhus<select id="setting-temperature-entity"><option value="">Välj givare</option></select></label></div>
-<p id="ha-temperature-status" class="notice" role="status">För HA-givare används det medföljande HA-kortet.</p>
-<p class="notice">Väder och ortsökning: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>. Kräver internet. Välj en träff och spara.</p></section>
-<section class="settings-section"><h3>Kolumner</h3><p class="sr-only" id="drag-instructions">Dra handtaget uppåt eller nedåt. Med tangentbord: fokusera handtaget och använd upp- eller nedpil. Escape avbryter en pågående dragning.</p><div id="column-list" role="list" aria-label="Kalenderns kolumner i visningsordning"></div><p id="column-order-status" class="sr-only" role="status" aria-live="polite"></p>
+<section class="settings-section" aria-labelledby="general-title"><h3 id="general-title">Language, time and weather</h3><label class="online-field">Language<select id="setting-language"><option value="sv">Swedish</option><option value="en">English</option></select></label>
+<div class="settings-grid"><label>Time format<select id="setting-time"><option value="24h">24 hours · 17:30</option><option value="12h">AM/PM · 05:30 PM</option></select></label>
+<label>Temperature<select id="setting-unit"><option value="celsius">Celsius · °C</option><option value="fahrenheit">Fahrenheit · °F</option></select></label></div>
+<label>Weather forecast city<span class="city-search"><input id="weather-city" maxlength="100" autocomplete="off" placeholder="Search for a city, e.g. Stockholm"><button type="button" class="today" id="search-city">Search</button></span></label>
+<p id="city-status" class="notice" role="status"></p><div id="city-results" class="city-results" role="group" aria-label="Choose weather city"></div>
+<button type="button" class="text-button" id="clear-city">Remove weather city</button>
+<div class="settings-grid temperature-settings"><label>Current outdoor temperature source<select id="setting-temperature-source"><option value="weather">Weather service</option><option value="ha">Home Assistant temperature sensor</option></select></label><label>HA outdoor sensor<select id="setting-temperature-entity"><option value="">Select sensor</option></select></label></div>
+<p id="ha-temperature-status" class="notice" role="status">HA sensors use the included HA card.</p>
+<p class="notice">Weather and city search: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>. Requires internet. Select a result and save.</p></section>
+<section class="settings-section"><h3>Columns</h3><p class="sr-only" id="drag-instructions">Drag the handle up or down. With a keyboard, focus the handle and use the arrow keys. Escape cancels dragging.</p><div id="column-list" role="list" aria-label="Calendar columns in display order"></div><p id="column-order-status" class="sr-only" role="status" aria-live="polite"></p>
   <div id="remove-column-panel" class="removal hidden">
    <h3 id="remove-column-title"></h3><p id="remove-column-info"></p>
-   <label id="move-column-label">Flytta egna aktiviteter till<select id="move-column"></select></label>
-   <div class="removal-actions"><button type="button" class="today" id="cancel-remove-column">Avbryt</button><button type="button" class="danger-button" id="confirm-remove-column">Ta bort kolumn</button></div>
+   <label id="move-column-label">Move individual events to<select id="move-column"></select></label>
+   <div class="removal-actions"><button type="button" class="today" id="cancel-remove-column">Cancel</button><button type="button" class="danger-button" id="confirm-remove-column">Remove column</button></div>
   </div>
-  <div class="new-column"><label>Namn på ny kolumn<input id="new-column-name" maxlength="30" autocomplete="off" placeholder="Till exempel en person"></label><button type="button" class="today" id="add-column">Lägg till</button></div>
-  </section><section class="settings-section"><h3>Säkerhetskopia och flytt</h3><p class="notice">Aktiviteter och inställningar sparas i denna webbläsare. Exportera före flytt till HA eller en annan adress. Flera skärmar synkroniseras inte automatiskt.</p>
-<div class="backup-actions"><button type="button" class="today" id="export-data">Exportera JSON</button><label class="today import-label">Importera JSON<input id="import-data" type="file" accept=".json,application/json"></label></div><p id="backup-status" class="notice" role="status"></p></section>
+  <div class="new-column"><label>New column name<input id="new-column-name" maxlength="30" autocomplete="off" placeholder="For example, a person"></label><button type="button" class="today" id="add-column">Add</button></div>
+  </section><section class="settings-section"><h3>Backup and migration</h3><p class="notice">Local events and settings are saved in this browser. Export before moving to HA or another address. Local data does not sync automatically between screens.</p>
+<div class="backup-actions"><button type="button" class="today" id="export-data">Export JSON</button><label class="today import-label">Import JSON<input id="import-data" type="file" accept=".json,application/json"></label></div><p id="backup-status" class="notice" role="status"></p></section>
 <p class="form-error hidden" id="column-error" role="alert"></p>
  </div>
  <div class="settings-footer">
-  <p class="notice">Ändringarna sparas lokalt när du väljer Spara inställningar.</p>
-  <div class="column-actions"><button type="button" class="today" id="cancel-columns">Avbryt</button><button type="button" class="add" id="save-columns">Spara inställningar</button></div>
+  <p class="notice">Changes are saved locally when you choose Save settings.</p>
+  <div class="column-actions"><button type="button" class="today" id="cancel-columns">Cancel</button><button type="button" class="add" id="save-columns">Save settings</button></div>
  </div>
 </dialog>
 
 <dialog id="color-picker" aria-labelledby="color-title">
- <div class="dialog-head"><h2 id="color-title">Välj färg</h2><button type="button" class="close" id="close-color-picker" aria-label="Stäng färgpaletten">×</button></div>
- <p class="dialog-sub" id="color-subtitle">Dämpade färger som passar kalenderns tema. Varje kolumn har en egen färg.</p>
- <div class="dialog-content"><div class="theme-palette" id="theme-palette" role="group" aria-label="Temafärger"></div><p class="notice">Överkryssade färger används redan av en annan kolumn. Lila är reserverat för delade aktiviteter.</p><div class="picker-actions"><button type="button" class="today" id="cancel-color-picker">Avbryt</button></div></div>
+ <div class="dialog-head"><h2 id="color-title">Choose color</h2><button type="button" class="close" id="close-color-picker" aria-label="Close color palette">×</button></div>
+ <p class="dialog-sub" id="color-subtitle">Muted colors that suit the calendar theme. Each column has its own color.</p>
+ <div class="dialog-content"><div class="theme-palette" id="theme-palette" role="group" aria-label="Theme colors"></div><p class="notice">Crossed-out colors are already used by another column. Purple is reserved for shared events.</p><div class="picker-actions"><button type="button" class="today" id="cancel-color-picker">Cancel</button></div></div>
 </dialog>
 
 <dialog id="value-picker" aria-labelledby="picker-title">
- <div class="dialog-head"><h2 id="picker-title">Välj datum</h2><button type="button" class="close" id="close-picker" aria-label="Stäng väljaren">×</button></div>
+ <div class="dialog-head"><h2 id="picker-title">Choose date</h2><button type="button" class="close" id="close-picker" aria-label="Close picker">×</button></div>
  <div class="dialog-content">
   <section id="date-picker-panel">
-   <div class="picker-nav"><button type="button" class="icon" id="picker-prev" aria-label="Föregående månad">‹</button><label class="sr-only" for="picker-month">Månad</label><select id="picker-month"></select><label class="sr-only" for="picker-year">År</label><input id="picker-year" type="number" min="2000" max="2100" aria-label="År"><button type="button" class="icon" id="picker-next" aria-label="Nästa månad">›</button></div>
-   <div class="picker-weekdays" aria-hidden="true"><span>Mån</span><span>Tis</span><span>Ons</span><span>Tor</span><span>Fre</span><span>Lör</span><span>Sön</span></div>
-   <div id="picker-days" class="picker-days" role="group" aria-label="Välj datum"></div>
+   <div class="picker-nav"><button type="button" class="icon" id="picker-prev" aria-label="Previous month">‹</button><label class="sr-only" for="picker-month">Month</label><select id="picker-month"></select><label class="sr-only" for="picker-year">Year</label><input id="picker-year" type="number" min="2000" max="2100" aria-label="Year"><button type="button" class="icon" id="picker-next" aria-label="Next month">›</button></div>
+   <div class="picker-weekdays" aria-hidden="true"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+   <div id="picker-days" class="picker-days" role="group" aria-label="Choose date"></div>
    <p id="picker-date-note" class="notice">YYYY-MM-DD</p>
-   <div class="picker-actions"><button type="button" class="today" id="picker-today">Idag</button><button type="button" class="today" id="cancel-date-picker">Avbryt</button></div>
+   <div class="picker-actions"><button type="button" class="today" id="picker-today">Today</button><button type="button" class="today" id="cancel-date-picker">Cancel</button></div>
   </section>
   <section id="time-picker-panel" class="hidden">
-   <p class="notice time-picker-intro">24-timmarsklocka</p>
-   <div class="clock-inputs"><label>Timme<select id="picker-hour"></select></label><span aria-hidden="true">:</span><label>Minut<select id="picker-minute"></select></label></div>
+   <p class="notice time-picker-intro">24-hour clock</p>
+   <div class="clock-inputs"><label>Hour<select id="picker-hour"></select></label><span aria-hidden="true">:</span><label>Minute<select id="picker-minute"></select></label></div>
    <p class="clock-preview" id="clock-preview" aria-live="polite">08:00</p>
-   <div class="picker-actions"><button type="button" class="today" id="clear-picked-time">Ingen tid</button><button type="button" class="add" id="save-picked-time">Välj tid</button></div>
+   <div class="picker-actions"><button type="button" class="today" id="clear-picked-time">No time</button><button type="button" class="add" id="save-picked-time">Choose time</button></div>
   </section>
  </div>
 </dialog>
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <script>
-const englishMessages={"Family Planner": "Family Planner", "/ familjen": "/ family", "Månadsplanerare": "Monthly planner", "Tema": "Theme", "Mörkt läge": "Dark mode", "Allas planer. Samma plats.": "Everyone's plans. One place.", "Idag": "Today", "Dag": "Day", "Välj väderstad i Inställningar": "Choose a weather city in Settings", "☀ Välj väderstad i Inställningar": "☀ Choose a weather city in Settings", "Utomhus just nu": "Outside right now", "Välj väderstad eller HA-givare": "Choose a weather city or HA sensor", "Inställningar": "Settings", "Större rader": "Larger rows", "Ny aktivitet": "New event", "Redigera aktivitet": "Edit event", "Lokal kalender · Sparas bara i denna webbläsare": "Local calendar · Saved only in this browser", "Lokal kalender · Ändringar sparas under denna visning": "Local calendar · Changes kept during this session", "· Tryck i en ruta för att planera": "· Tap a cell to plan", "Flera deltagare": "Multiple participants", "Helskärm": "Fullscreen", "Lämna helskärm": "Exit fullscreen", "Återställ kalender": "Reset calendar", "En liten plan att se fram emot.": "A little plan to look forward to.", "+ Ny aktivitet samma dag": "+ New event on the same day", "Spara i": "Save to", "Lokal kalender": "Local calendar", "Aktivitet": "Event", "Kopplad till": "Participants", "Välj minst en kolumn.": "Select at least one column.", "Från datum": "Start date", "Välj": "Choose", "Till och med": "Through date", "Datum: YYYY-MM-DD. Slutdatum ingår.": "Dates: YYYY-MM-DD. End date is inclusive.", "Starttid, valfritt": "Start time, optional", "Sluttid, valfritt": "End time, optional", "24-timmarsformat. Skriv t.ex. 1730 → 17:30. Tomma tider = heldag.": "24-hour format. Type e.g. 1730 → 17:30. Leave times blank for all day.", "12-timmarsformat. Skriv t.ex. 0530 → 05:30 och välj AM eller PM. Tomma tider = heldag.": "12-hour format. Type e.g. 0530 → 05:30 and select AM or PM. Leave times blank for all day.", "Ta bort aktivitet": "Delete event", "Ny aktivitet": "New event", "Spara aktivitet": "Save event", "Lokala aktiviteter sparas bara i denna webbläsare.": "Local events are saved only in this browser.", "Anpassa tid, väder och familjens kolumner.": "Customize language, time, weather and your family's columns.", "Kalenderkälla": "Calendar source", "Visa kalender": "Calendar view", "Onlinekalendrar": "Online calendars", "Onlinekalendrar och lokala aktiviteter": "Online calendars and local events", "Person 5 - Dans visas hos Person 5. Person 5, Person 4 - Bio visas hos båda som en gemensam händelse. Namn matchas mot kolumnerna utan hänsyn till stora/små bokstäver.": "Person 5 - Dance appears in Person 5's column. Person 5, Person 4 - Cinema appears in both as one shared event. Names match column names without case sensitivity.", "Händelser utan matchande namn": "Events without matching names", "iCloud-anslutning och kalender": "iCloud connection and calendar", "Apple-ID": "Apple ID", "Appspecifikt lösenord": "App-specific password", "Anslut iCloud": "Connect iCloud", "Koppla från": "Disconnect", "Anslut/Koppla från gäller direkt för servern. Använd ett": "Connecting and disconnecting take effect immediately on the server. Use an", "appspecifikt Apple-lösenord": "Apple app-specific password", ". Inloggningen sparas enbart på servern och ingår inte i exporten.": ". Credentials are stored only on the server and are excluded from exports.", "iCloud-kalender": "iCloud calendar", "Välj kalender efter anslutning": "Select a calendar after connecting", "Kalenderns tidszon": "Calendar time zone", "Uppdatera nu": "Refresh now", "Spara inställningar aktiverar valt visningsläge och vald kalender. Befintliga lokala aktiviteter behålls. Redigering av en återkommande händelse gäller bara det valda tillfället.": "Save settings to activate the selected view and calendars. Existing local events are kept. Editing a recurring event changes only that occurrence.", "Välj vilka kalendrar som ska visas. Anslutning och bortkoppling gäller direkt för servern. Kalenderurvalet sparas med Spara inställningar.": "Choose which calendars to show. Connecting and disconnecting take effect immediately on the server. Save settings to apply your calendar selection.", "Lägg till kalenderkälla": "Add calendar source", "Leverantör": "Provider", "Google Kalender": "Google Calendar", "CalDAV (Nextcloud, Fastmail med flera)": "CalDAV (Nextcloud, Fastmail and others)", "ICS / iCalendar-länk (läsning)": "ICS / iCalendar link (read only)", "Namn": "Name", "Serveradress eller kalenderlänk": "Server address or calendar link", "Användarnamn": "Username", "Lösenord eller applösenord": "Password or app password", "Långlivad åtkomsttoken": "Long-lived access token", "Skapa en token i din HA-profil. Händelser kan läsas och nya kan skapas om kalendern stöder det. Ändra eller ta bort befintliga händelser i HA.": "Create a token in your HA profile. Events can be read and new events created when the calendar supports it. Edit or delete existing events in HA.", "Aktivera Calendar API i Google Cloud och skapa en OAuth-klient för Desktop app vid lokal körning. För en publicerad tjänst används en Web application-klient med nedanstående returadress.": "Enable Calendar API in Google Cloud and create a Desktop app OAuth client for local use. For a hosted service, use a Web application client with the redirect URI shown below.", "Fortsätt till Google": "Continue to Google", "Tidszon": "Time zone", "Anslut kalenderkälla": "Connect calendar source", "Hämta kalenderkällor": "Reload calendar sources", "Språk, tid och väder": "Language, time and weather", "Språk / Language": "Language / Språk", "Tidsformat": "Time format", "24 timmar · 17:30": "24 hours · 17:30", "Temperatur": "Temperature", "Stad för väderprognosen": "Weather forecast city", "Sök": "Search", "Ta bort väderstad": "Remove weather city", "Källa för aktuell utetemperatur": "Current outdoor temperature source", "Vädertjänsten": "Weather service", "Temperaturgivare i Home Assistant": "Home Assistant temperature sensor", "HA-givare utomhus": "HA outdoor sensor", "Välj givare": "Select sensor", "För HA-givare används det medföljande HA-kortet.": "HA sensors use the included HA card.", "Väder och ortsökning:": "Weather and city search:", ". Kräver internet. Välj en träff och spara.": ". Requires internet. Select a result and save.", "Kolumner": "Columns", "Dra handtaget uppåt eller nedåt. Med tangentbord: fokusera handtaget och använd upp- eller nedpil. Escape avbryter en pågående dragning.": "Drag the handle up or down. With a keyboard, focus the handle and use the arrow keys. Escape cancels dragging.", "Flytta egna aktiviteter till": "Move individual events to", "Avbryt": "Cancel", "Ta bort kolumn": "Remove column", "Namn på ny kolumn": "New column name", "Lägg till": "Add", "Säkerhetskopia och flytt": "Backup and migration", "Aktiviteter och inställningar sparas i denna webbläsare. Exportera före flytt till HA eller en annan adress. Flera skärmar synkroniseras inte automatiskt.": "Local events and settings are saved in this browser. Export before moving to HA or another address. Local data does not sync automatically between screens.", "Exportera JSON": "Export JSON", "Importera JSON": "Import JSON", "Spara inställningar": "Save settings", "Ändringarna sparas lokalt när du väljer Spara inställningar.": "Changes are saved locally when you choose Save settings.", "Välj färg": "Choose color", "Dämpade färger som passar kalenderns tema. Varje kolumn har en egen färg.": "Muted colors that suit the calendar theme. Each column has its own color.", "Överkryssade färger används redan av en annan kolumn. Lila är reserverat för delade aktiviteter.": "Crossed-out colors are already used by another column. Purple is reserved for shared events.", "Välj datum": "Choose date", "Månad": "Month", "År": "Year", "Mån": "Mon", "Tis": "Tue", "Ons": "Wed", "Tor": "Thu", "Fre": "Fri", "Lör": "Sat", "Sön": "Sun", "24-timmarsklocka": "24-hour clock", "12-timmarsklocka · AM/PM": "12-hour clock · AM/PM", "Timme": "Hour", "Minut": "Minute", "Ingen tid": "No time", "Välj tid": "Choose time", "Till exempel träning eller familjemiddag": "For example, training or family dinner", "Till exempel en person": "For example, a person", "Till exempel Familj": "For example, Family", "Sök stad, till exempel Stockholm": "Search for a city, e.g. Stockholm", "Familjens månadsöversikt": "Family month overview", "Dagens väder och aktuell utetemperatur": "Today's weather and current outdoor temperature", "Föregående månad": "Previous month", "Nästa månad": "Next month", "Färgtema": "Color theme", "Stäng": "Close", "Stäng inställningar": "Close settings", "Stäng färgpaletten": "Close color palette", "Stäng väljaren": "Close picker", "Välj startdatum": "Choose start date", "Välj slutdatum": "Choose end date", "Välj starttid": "Choose start time", "Välj sluttid": "Choose end time", "Välj väderstad": "Choose weather city", "Temafärger": "Theme colors", "Kalenderns kolumner i visningsordning": "Calendar columns in display order", "Starttid AM eller PM": "Start time AM or PM", "Sluttid AM eller PM": "End time AM or PM", "Ändringen visas här men kunde inte sparas i webbläsaren.": "The change is shown here but could not be saved in the browser.", "Aktiviteten är sparad lokalt.": "Event saved locally.", "Aktiviteten är borttagen.": "Event deleted.", "Aktiviteten är sparad i onlinekalendern.": "Event saved to the online calendar.", "Aktiviteten är sparad, men kalendern kunde inte uppdateras.": "Event saved, but the calendar could not be refreshed.", "Aktiviteten är borttagen från onlinekalendern.": "Event deleted from the online calendar.", "Skriv en aktivitet.": "Enter an event.", "Skriv ett giltigt datum som YYYY-MM-DD.": "Enter a valid date as YYYY-MM-DD.", "Slutdatum får inte vara före startdatum.": "The end date cannot be before the start date.", "Sluttiden måste vara efter starttiden när aktiviteten slutar samma dag.": "The end time must be after the start time for events ending on the same day.", "Större tryckytor. Svep för att se resten av månaden.": "Larger touch targets. Swipe to see the rest of the month.", "Månadsöversikt. Alla dagar syns samtidigt.": "Month overview. All days are visible at once.", "Använd webbläsarens helskärmsläge eller lägg till på hemskärmen.": "Use your browser's fullscreen mode or add to the home screen.", "Helskärm stöds inte här. Prova webbläsarens helskärmsläge.": "Fullscreen is not supported here. Try your browser's fullscreen mode.", "Töm den lokala kalendern och återställ standardkolumnerna? Onlinehändelser påverkas inte.": "Clear the local calendar and reset the default columns? Online events are not affected.", "Den lokala kalendern är återställd.": "Local calendar reset.", "Skriv ett namn för den nya kolumnen.": "Enter a name for the new column.", "Namnet används redan. Välj ett annat namn.": "This name is already in use. Choose another name.", "Alla kolumner behöver ett namn.": "All columns need a name.", "Kolumnerna behöver ha olika namn.": "Columns must have different names.", "Varje kolumn behöver ha en egen färg.": "Each column must have its own color.", "Slutför eller avbryt borttagningen först.": "Complete or cancel the removal first.", "Sök efter staden och välj en träff, eller ta bort väderstaden.": "Search for the city and select a result, or remove the weather city.", "Välj en utomhusgivare från HA-listan.": "Select an outdoor sensor from the HA list.", "Starta kalenderservern, anslut en kalenderkälla och välj en kalender först.": "Start the calendar server, connect a source and select a calendar first.", "Inställningarna är sparade lokalt.": "Settings saved locally.", "Alla 32 temafärger används. En färg behöver bli ledig innan en ny kolumn kan läggas till.": "All 32 theme colors are in use. Free up a color before adding a column.", "Minst en kolumn behövs": "At least one column is required", "Namnlös kolumn": "Unnamed column", "Inga aktiviteter är kopplade till kolumnen.": "No events are linked to this column.", "Flyttningen avbröts.": "Move cancelled.", "Skriv minst två tecken.": "Enter at least two characters.", "Söker…": "Searching…", "Välj rätt stad i listan.": "Choose the correct city from the list.", "Inga träffar. Prova stad och land.": "No results. Try a city and country.", "Kunde inte söka städer. Kontrollera internet och försök igen.": "Could not search for cities. Check your connection and try again.", "Tryck Sök och välj en träff.": "Press Search and select a result.", "Ingen stad vald.": "No city selected.", "Vald stad: ": "Selected city: ", "Välj utomhusgivare": "Select outdoor sensor", "HA anslutet. Välj den givare som sitter utomhus.": "HA connected. Choose the sensor located outside.", "Ingen HA-anslutning. Givarlistan blir tillgänglig via det medföljande HA-kortet.": "No HA connection. The sensor list is available through the included HA card.", "Vädertjänsten · modellvärde": "Weather service · model value", "Väder ej tillgängligt · ": "Weather unavailable · ", "Hämtar dagens väder för ": "Fetching today's weather for ", " · Försök via Inställningar": " · Try Settings", "Säkerhetskopian laddas ned. Osparade inställningar ingår inte.": "The backup is downloading. Unsaved settings are not included.", "Ersätt denna webbläsares kalender med säkerhetskopian? Exportera först om du vill behålla den nuvarande.": "Replace this browser's calendar with the backup? Export first to keep the current data.", "Kunde inte importera. Välj en giltig säkerhetskopia från familjekalendern (högst 5 MB).": "Could not import. Select a valid family-calendar backup (up to 5 MB).", "Ange både start- och sluttid, eller lämna båda tomma för heldag.": "Enter both start and end times, or leave both blank for an all-day event.", "Återkommande aktivitet. Ändringar gäller bara detta tillfälle.": "Recurring event. Changes apply only to this occurrence.", "Deltagarnas namn skrivs automatiskt före aktivitetens titel.": "Participants' names are automatically added before the event title.", "Ändringar sparas hos den valda kalenderleverantören.": "Changes are saved with the selected calendar provider.", "Lokal aktivitet · Sparas bara i denna webbläsare.": "Local event · Saved only in this browser.", "Uppdatera kalendern innan du redigerar.": "Refresh the calendar before editing.", "Skrivskyddad händelse. Ändra den hos kalenderleverantören.": "Read-only event. Edit it with the calendar provider.", "Ta bort bara detta tillfälle? Övriga tillfällen behålls.": "Delete only this occurrence? Other occurrences will be kept.", "Ta bort aktiviteten från onlinekalendern?": "Delete this event from the online calendar?", "Inga kalenderkällor anslutna.": "No calendar sources connected.", "Visa och redigera": "View and edit", "Visa och skapa": "View and create", "Enbart läsning": "Read only", "Koppla från kalenderkällan? Händelser hos leverantören raderas inte.": "Disconnect this calendar source? Events with the provider will not be deleted.", "Returadress: ": "Redirect URI: ", "Ansluter…": "Connecting…", "Fortsätt till Google och godkänn kalenderåtkomst.": "Continue to Google and grant calendar access.", "Ansluten. Välj kalendrar och spara inställningarna.": "Connected. Choose calendars and save settings.", "Google anslutet. Välj kalendrar och spara inställningarna.": "Google connected. Choose calendars and save settings.", "Lokal kalender · Sparas bara i denna webbläsare": "Local calendar · Saved only in this browser", "Hämtar…": "Fetching…", "Kunde inte uppdatera": "Could not refresh", " · senast hämtade händelser visas": " · showing the last fetched events", "Uppdaterad ": "Updated ", " · Även lokala aktiviteter": " · Including local events", "Anslut en kalenderkälla i Inställningar": "Connect a calendar source in Settings", "Öppna kalendern via den lokala servern för att använda iCloud.": "Open the calendar through the local server to use online calendars.", "Kalenderåtgärden misslyckades.": "The calendar operation failed.", "Kalendertjänsten svarade inte i tid. Uppdatera innan du försöker spara igen.": "The calendar service timed out. Refresh before trying to save again.", "Kalendertjänsten skickade ett ogiltigt svar.": "The calendar service returned an invalid response.", "Välj kalender": "Choose calendar", "Vald kalender": "Selected calendar", "Onlinekalender kräver den lokala servern. Se ONLINE-CALENDAR.md.": "Online calendars require the local server. See ONLINE-CALENDAR.md.", "Starta servern med projektets .venv/bin/python för iCloud-stöd.": "Start the server using the project's .venv/bin/python for calendar support.", "iCloud-konto anslutet. Välj kalender och spara inställningarna.": "iCloud account connected. Choose a calendar and save settings.", "Redo att ansluta iCloud.": "Ready to connect iCloud.", "Ansluter till iCloud…": "Connecting to iCloud…", "Ansluten. Välj kalender och spara inställningarna.": "Connected. Choose a calendar and save settings.", "Koppla från iCloud och ta bort serverns sparade Apple-inloggning? Kalendern i iCloud raderas inte.": "Disconnect iCloud and remove the saved Apple credentials from the server? Your iCloud calendar will not be deleted.", "Home – befintlig profil": "Home – existing style", "Salvia – mjukt & grönt": "Sage – soft and green", "Hav – blå kontrast": "Ocean – blue contrast", "Sand – papperskalender": "Sand – paper calendar", "Plommon – färgstarkt": "Plum – colorful", "Hem – Startdashboard": "Home – start dashboard", "E-ink – tydligt & monokromt": "E-ink – clear and monochrome", "Familjekalender för ": "Family calendar for ", ". En rad per dag och en kolumn per person, samt gemensamma planer.": ". One row per day and one column per person, plus shared plans.", "Ändra kolumn ": "Edit column ", "Lägg till aktivitet för ": "Add an event for ", " · flerdagarsaktivitet": " · multi-day event", "Namn på kolumn ": "Column name ", "Ta bort kolumn ": "Remove column ", "Dra för att ändra ordning": "Drag to reorder", "Byt färg": "Change color", "Välj färg för ": "Choose color for ", "Färg för ": "Color for ", "kolumnen": "column", " flyttad till plats ": " moved to position ", " av ": " of ", "Ta bort ": "Remove ", " aktiviteter är kopplade. Delade aktiviteter behåller sina övriga deltagare.": " events are linked. Shared events keep their other participants.", " egna aktiviteter flyttas till vald kolumn.": " individual events will be moved to the selected column.", "Valt datum: ": "Selected date: ", "Datum anges som YYYY-MM-DD.": "Dates use YYYY-MM-DD.", " – används av ": " – used by ", " · används av ": " · used by ", " – vald": " – selected", " · ej tillgänglig": " · unavailable", " (ej ansluten)": " (not connected)", "Allmän flaggdag: ": "Swedish flag day: ", " · Allmän flaggdag": " · Swedish flag day", " · Allmän helgdag": " · Swedish public holiday", ", allmän flaggdag": ", Swedish flag day", ", allmän helgdag": ", Swedish public holiday", "Nyårsdagen": "New Year's Day", "Trettondagsafton": "Twelfth Night", "Trettondedag jul": "Epiphany", "Valborgsmässoafton": "Walpurgis Night", "Första maj": "May Day", "Nationaldagen": "Swedish National Day", "Lucia": "Saint Lucia's Day", "Julafton": "Christmas Eve", "Juldagen": "Christmas Day", "Annandag jul": "Boxing Day", "Nyårsafton": "New Year's Eve", "Långfredagen": "Good Friday", "Påskafton": "Easter Eve", "Påskdagen": "Easter Sunday", "Annandag påsk": "Easter Monday", "Kristi himmelsfärdsdag": "Ascension Day", "Pingstafton": "Pentecost Eve", "Pingstdagen": "Pentecost Sunday", "Annandag pingst": "Whit Monday", "Midsommarafton": "Midsummer Eve", "Midsommardagen": "Midsummer Day", "Alla helgons dag": "All Saints' Day", "Första advent": "First Sunday of Advent", "Andra advent": "Second Sunday of Advent", "Tredje advent": "Third Sunday of Advent", "Fjärde advent": "Fourth Sunday of Advent", "Kungens namnsdag": "King's name day", "Kronprinsessans namnsdag": "Crown Princess's name day", "Kungens födelsedag": "King's birthday", "Kronprinsessans födelsedag": "Crown Princess's birthday", "Drottningens namnsdag": "Queen's name day", "FN-dagen": "United Nations Day", "Gustav Adolfsdagen": "Gustavus Adolphus Day", "Nobeldagen": "Nobel Day", "Drottningens födelsedag": "Queen's birthday", "Veterandagen": "Swedish Veterans Day", "Riksdagsval": "Swedish parliamentary election", "EU-val": "European Parliament election", "Klart": "Clear", "Mestadels klart": "Mostly clear", "Växlande molnighet": "Partly cloudy", "Mulet": "Overcast", "Dimma": "Fog", "Duggregn": "Drizzle", "Regn": "Rain", "Snö": "Snow", "Regnskurar": "Rain showers", "Snöbyar": "Snow showers", "Åska": "Thunderstorm", "Nederbördsrisk ": "Chance of rain ", "Vind ": "Wind ", "Senast uppdaterad ": "Last updated ", "Salvia": "Sage", "Djup petrol": "Deep teal", "Terrakotta": "Terracotta", "Blåklint": "Cornflower", "Ljung": "Heather", "Ockra": "Ochre", "Skogsgrön": "Forest green", "Eukalyptus": "Eucalyptus", "Havsblå": "Ocean blue", "Skiffer": "Slate", "Midnattsblå": "Midnight blue", "Dämpad indigo": "Muted indigo", "Malva": "Mauve", "Plommon": "Plum", "Rosenträ": "Rosewood", "Tegel": "Brick", "Kanel": "Cinnamon", "Jord": "Earth", "Senap": "Mustard", "Oliv": "Olive", "Mossa": "Moss", "Gran": "Spruce", "Stormblå": "Storm blue", "Lavendelgrå": "Lavender gray", "Dammrosa": "Dusty rose", "Vinröd": "Burgundy", "Brons": "Bronze", "Varmgrå": "Warm gray", "Sten": "Stone", "Bark": "Bark", "Kalendern nekade åtkomst. Kontrollera anslutning och behörighet.": "The calendar denied access. Check the connection and permissions.", "Kalendertjänsten kunde inte nås. Kontrollera serveradressen och anslutningen.": "The calendar service could not be reached. Check the server address and connection.", "Kunde inte hämta kalendern. Kontrollera anslutningen.": "Could not fetch the calendar. Check the connection.", "Händelsen har ändrats. Uppdatera kalendern och försök igen.": "The event has changed. Refresh the calendar and try again.", "Ladda om sidan och försök igen.": "Reload the page and try again.", "Uppgifterna kunde inte tolkas. Kontrollera formuläret.": "The data could not be parsed. Check the form.", "Ange en giltig serveradress.": "Enter a valid server address.", "Ange användarnamn och lösenord.": "Enter a username and password.", "Ange en långlivad åtkomsttoken från Home Assistant.": "Enter a Home Assistant long-lived access token.", "Ange Googles OAuth Client ID och Client secret.": "Enter your Google OAuth Client ID and Client secret.", "Ange en giltig tidszon.": "Enter a valid time zone.", "Kalendern är skrivskyddad.": "This calendar is read only.", "Kalendern stöder inte denna ändring. Öppna den hos leverantören.": "This calendar does not support this change. Open it with the provider.", "Välj kalendern i Inställningar först.": "Select the calendar in Settings first.", "Kalendertjänsten kunde inte nås eller nekade åtgärden. Kontrollera anslutningen och kalenderns behörighet.": "The calendar service could not be reached or denied the operation. Check its connection and permissions.", "iCloud nekade inloggningen. Kontrollera Apple-ID och appspecifikt lösenord.": "iCloud denied login. Check your Apple ID and app-specific password.", " · heldag": " · all day", ". Redigera aktivitet.": ". Edit event.", ", idag": ", today", "Dagens prognos · ": "Today's forecast · ", "Vind upp till ": "Wind up to ", "Sparad prognos · Open-Meteo": "Saved forecast · Open-Meteo", "Sparad prognos, kan inte uppdatera": "Saved forecast, unable to refresh", "HA-givare · ingen anslutning": "HA sensor · no connection", "HA-givaren saknas": "HA sensor not found", "HA-givare · ": "HA sensor · ", "Uppdaterat ": "Updated ", "Aktuell temperatur saknas": "Current temperature unavailable", "Skapa en token i din HA-profil. Tillgängliga åtgärder följer kalenderns stöd och dina behörigheter i HA.": "Create a token in your HA profile. Available actions depend on the calendar and your HA permissions.", "HA nekade WebSocket-anslutningen.": "HA denied the WebSocket connection.", "HA tillät inte ändringen. Kontrollera kalenderns stöd och behörighet.": "HA rejected the change. Check the calendar capabilities and permissions.", "HA skickade inget svar på ändringen.": "HA did not respond to the change.", "HA:s kalenderanslutning kunde inte slutföra ändringen. Uppdatera innan du försöker igen.": "The HA calendar connection could not complete the change. Refresh before trying again.", "Händelsen saknar en giltig HA-referens.": "The event has no valid HA reference.", "Använd en http- eller https-adress utan inloggningsuppgifter i adressen.": "Use an http or https address without credentials in the URL.", "Kalendersvaret är för stort.": "The calendar response is too large.", "Ange ett giltigt datumintervall på högst 95 dagar.": "Enter a valid date range of up to 95 days.", "Ogiltig händelsereferens.": "Invalid event reference.", "Kalenderkällan finns inte.": "The calendar source does not exist.", "Välj en kalenderleverantör.": "Choose a calendar provider.", "Google-inloggningen har gått ut eller avbrutits. Försök igen.": "Google sign-in expired or was cancelled. Try again.", "Google gav ingen beständig åtkomst. Anslut igen och godkänn kalenderåtkomst.": "Google did not grant persistent access. Reconnect and grant calendar access.", "För många kalendrar i kontot.": "Too many calendars in the account.", "Välj en iCloud-kalender.": "Choose an iCloud calendar.", "Ogiltigt kalenderurval.": "Invalid calendar selection.", "För många kalenderhändelser.": "Too many calendar events.", "Ange en aktivitet med högst 512 tecken.": "Enter an event with up to 512 characters.", "Ogiltig referens för sparningen.": "Invalid save reference.", "Uppdatera kalendern innan du ändrar händelsen.": "Refresh the calendar before changing the event.", "Sparreferensen används redan.": "The save reference is already in use.", "Ange ditt Apple-ID och ett appspecifikt lösenord.": "Enter your Apple ID and an app-specific password.", "Anslut ett iCloud-konto i Inställningar.": "Connect an iCloud account in Settings.", "Välj vilken iCloud-kalender som ska användas.": "Choose which iCloud calendar to use.", "Händelsen har tagits bort i iCloud. Uppdatera kalendern.": "The event has been deleted in iCloud. Refresh the calendar.", "Kunde inte läsa händelsen från kalendern.": "Could not read the calendar event.", "Servern saknar versionsinformation. Händelsen ändras inte.": "The server provides no version information. The event will not be changed.", "Händelsen har ändrats i iCloud. Uppdatera och öppna den igen innan du sparar.": "The event has changed in iCloud. Refresh and reopen it before saving.", "Kalendern tillät inte ändringen. Kontrollera behörigheten till kalendern.": "The calendar rejected the change. Check its permissions.", "Klockslaget finns inte denna dag på grund av sommartidsbytet. Välj en annan tid.": "This time does not exist because of the daylight-saving change. Choose another time.", "Kontrollera datum och tider. Ange både start- och sluttid, eller lämna båda tomma för heldag.": "Check the dates and times. Enter both start and end times, or leave both blank for all day.", "Ansluten som: ": "Connected as: "};
+// English is the source language; this catalog preserves optional Swedish UI translations.
+const swedishMessages={
+  "/ family": "/ familjen",
+  "Monthly planner": "Månadsplanerare",
+  "Theme": "Tema",
+  "Dark mode": "Mörkt läge",
+  "Everyone's plans. One place.": "Allas planer. Samma plats.",
+  "Today": "Idag",
+  "Day": "Dag",
+  "Choose a weather city in Settings": "Välj väderstad i Inställningar",
+  "☀ Choose a weather city in Settings": "☀ Välj väderstad i Inställningar",
+  "Outside right now": "Utomhus just nu",
+  "Choose a weather city or HA sensor": "Välj väderstad eller HA-givare",
+  "Settings": "Inställningar",
+  "Larger rows": "Större rader",
+  "New event": "Ny aktivitet",
+  "Edit event": "Redigera aktivitet",
+  "Local calendar · Saved only in this browser": "Lokal kalender · Sparas bara i denna webbläsare",
+  "Local calendar · Changes kept during this session": "Lokal kalender · Ändringar sparas under denna visning",
+  "· Tap a cell to plan": "· Tryck i en ruta för att planera",
+  "Multiple participants": "Flera deltagare",
+  "Fullscreen": "Helskärm",
+  "Exit fullscreen": "Lämna helskärm",
+  "Reset calendar": "Återställ kalender",
+  "A little plan to look forward to.": "En liten plan att se fram emot.",
+  "+ New event on the same day": "+ Ny aktivitet samma dag",
+  "Save to": "Spara i",
+  "Local calendar": "Lokal kalender",
+  "Event": "Aktivitet",
+  "Participants": "Kopplad till",
+  "Select at least one column.": "Välj minst en kolumn.",
+  "Start date": "Från datum",
+  "Choose": "Välj",
+  "Through date": "Till och med",
+  "Dates: YYYY-MM-DD. End date is inclusive.": "Datum: YYYY-MM-DD. Slutdatum ingår.",
+  "Start time, optional": "Starttid, valfritt",
+  "End time, optional": "Sluttid, valfritt",
+  "24-hour format. Type e.g. 1730 → 17:30. Leave times blank for all day.": "24-timmarsformat. Skriv t.ex. 1730 → 17:30. Tomma tider = heldag.",
+  "12-hour format. Type e.g. 0530 → 05:30 and select AM or PM. Leave times blank for all day.": "12-timmarsformat. Skriv t.ex. 0530 → 05:30 och välj AM eller PM. Tomma tider = heldag.",
+  "Delete event": "Ta bort aktivitet",
+  "Save event": "Spara aktivitet",
+  "Local events are saved only in this browser.": "Lokala aktiviteter sparas bara i denna webbläsare.",
+  "Customize language, time, weather and your family's columns.": "Anpassa tid, väder och familjens kolumner.",
+  "Calendar source": "Kalenderkälla",
+  "Calendar view": "Visa kalender",
+  "Online calendars": "Onlinekalendrar",
+  "Online calendars and local events": "Onlinekalendrar och lokala aktiviteter",
+  "Person 5 - Dance appears in Person 5's column. Person 5, Person 4 - Cinema appears in both as one shared event. Names match column names without case sensitivity.": "Person 5 - Dans visas hos Person 5. Person 5, Person 4 - Bio visas hos båda som en gemensam händelse. Namn matchas mot kolumnerna utan hänsyn till stora/små bokstäver.",
+  "Events without matching names": "Händelser utan matchande namn",
+  "iCloud connection and calendar": "iCloud-anslutning och kalender",
+  "Apple ID": "Apple-ID",
+  "App-specific password": "Appspecifikt lösenord",
+  "Connect iCloud": "Anslut iCloud",
+  "Disconnect": "Koppla från",
+  "Connecting and disconnecting take effect immediately on the server. Use an": "Anslut/Koppla från gäller direkt för servern. Använd ett",
+  "Apple app-specific password": "appspecifikt Apple-lösenord",
+  ". Credentials are stored only on the server and are excluded from exports.": ". Inloggningen sparas enbart på servern och ingår inte i exporten.",
+  "iCloud calendar": "iCloud-kalender",
+  "Select a calendar after connecting": "Välj kalender efter anslutning",
+  "Calendar time zone": "Kalenderns tidszon",
+  "Refresh now": "Uppdatera nu",
+  "Save settings to activate the selected view and calendars. Existing local events are kept. Editing a recurring event changes only that occurrence.": "Spara inställningar aktiverar valt visningsläge och vald kalender. Befintliga lokala aktiviteter behålls. Redigering av en återkommande händelse gäller bara det valda tillfället.",
+  "Choose which calendars to show. Connecting and disconnecting take effect immediately on the server. Save settings to apply your calendar selection.": "Välj vilka kalendrar som ska visas. Anslutning och bortkoppling gäller direkt för servern. Kalenderurvalet sparas med Spara inställningar.",
+  "Add calendar source": "Lägg till kalenderkälla",
+  "Provider": "Leverantör",
+  "Google Calendar": "Google Kalender",
+  "CalDAV (Nextcloud, Fastmail and others)": "CalDAV (Nextcloud, Fastmail med flera)",
+  "ICS / iCalendar link (read only)": "ICS / iCalendar-länk (läsning)",
+  "Name": "Namn",
+  "Server address or calendar link": "Serveradress eller kalenderlänk",
+  "Username": "Användarnamn",
+  "Password or app password": "Lösenord eller applösenord",
+  "Long-lived access token": "Långlivad åtkomsttoken",
+  "Create a token in your HA profile. Events can be read and new events created when the calendar supports it. Edit or delete existing events in HA.": "Skapa en token i din HA-profil. Händelser kan läsas och nya kan skapas om kalendern stöder det. Ändra eller ta bort befintliga händelser i HA.",
+  "Enable Calendar API in Google Cloud and create a Desktop app OAuth client for local use. For a hosted service, use a Web application client with the redirect URI shown below.": "Aktivera Calendar API i Google Cloud och skapa en OAuth-klient för Desktop app vid lokal körning. För en publicerad tjänst används en Web application-klient med nedanstående returadress.",
+  "Continue to Google": "Fortsätt till Google",
+  "Time zone": "Tidszon",
+  "Connect calendar source": "Anslut kalenderkälla",
+  "Reload calendar sources": "Hämta kalenderkällor",
+  "Language, time and weather": "Språk, tid och väder",
+  "Language": "Språk / Language",
+  "Time format": "Tidsformat",
+  "24 hours · 17:30": "24 timmar · 17:30",
+  "Temperature": "Temperatur",
+  "Weather forecast city": "Stad för väderprognosen",
+  "Search": "Sök",
+  "Remove weather city": "Ta bort väderstad",
+  "Current outdoor temperature source": "Källa för aktuell utetemperatur",
+  "Weather service": "Vädertjänsten",
+  "Home Assistant temperature sensor": "Temperaturgivare i Home Assistant",
+  "HA outdoor sensor": "HA-givare utomhus",
+  "Select sensor": "Välj givare",
+  "HA sensors use the included HA card.": "För HA-givare används det medföljande HA-kortet.",
+  "Weather and city search:": "Väder och ortsökning:",
+  ". Requires internet. Select a result and save.": ". Kräver internet. Välj en träff och spara.",
+  "Columns": "Kolumner",
+  "Drag the handle up or down. With a keyboard, focus the handle and use the arrow keys. Escape cancels dragging.": "Dra handtaget uppåt eller nedåt. Med tangentbord: fokusera handtaget och använd upp- eller nedpil. Escape avbryter en pågående dragning.",
+  "Move individual events to": "Flytta egna aktiviteter till",
+  "Cancel": "Avbryt",
+  "Remove column": "Ta bort kolumn",
+  "New column name": "Namn på ny kolumn",
+  "Add": "Lägg till",
+  "Backup and migration": "Säkerhetskopia och flytt",
+  "Local events and settings are saved in this browser. Export before moving to HA or another address. Local data does not sync automatically between screens.": "Aktiviteter och inställningar sparas i denna webbläsare. Exportera före flytt till HA eller en annan adress. Flera skärmar synkroniseras inte automatiskt.",
+  "Export JSON": "Exportera JSON",
+  "Import JSON": "Importera JSON",
+  "Save settings": "Spara inställningar",
+  "Changes are saved locally when you choose Save settings.": "Ändringarna sparas lokalt när du väljer Spara inställningar.",
+  "Choose color": "Välj färg",
+  "Muted colors that suit the calendar theme. Each column has its own color.": "Dämpade färger som passar kalenderns tema. Varje kolumn har en egen färg.",
+  "Crossed-out colors are already used by another column. Purple is reserved for shared events.": "Överkryssade färger används redan av en annan kolumn. Lila är reserverat för delade aktiviteter.",
+  "Choose date": "Välj datum",
+  "Month": "Månad",
+  "Year": "År",
+  "Mon": "Mån",
+  "Tue": "Tis",
+  "Wed": "Ons",
+  "Thu": "Tor",
+  "Fri": "Fre",
+  "Sat": "Lör",
+  "Sun": "Sön",
+  "24-hour clock": "24-timmarsklocka",
+  "12-hour clock · AM/PM": "12-timmarsklocka · AM/PM",
+  "Hour": "Timme",
+  "Minute": "Minut",
+  "No time": "Ingen tid",
+  "Choose time": "Välj tid",
+  "For example, training or family dinner": "Till exempel träning eller familjemiddag",
+  "For example, a person": "Till exempel en person",
+  "For example, Family": "Till exempel Familj",
+  "Search for a city, e.g. Stockholm": "Sök stad, till exempel Stockholm",
+  "Family month overview": "Familjens månadsöversikt",
+  "Today's weather and current outdoor temperature": "Dagens väder och aktuell utetemperatur",
+  "Previous month": "Föregående månad",
+  "Next month": "Nästa månad",
+  "Color theme": "Färgtema",
+  "Close": "Stäng",
+  "Close settings": "Stäng inställningar",
+  "Close color palette": "Stäng färgpaletten",
+  "Close picker": "Stäng väljaren",
+  "Choose start date": "Välj startdatum",
+  "Choose end date": "Välj slutdatum",
+  "Choose start time": "Välj starttid",
+  "Choose end time": "Välj sluttid",
+  "Choose weather city": "Välj väderstad",
+  "Theme colors": "Temafärger",
+  "Calendar columns in display order": "Kalenderns kolumner i visningsordning",
+  "Start time AM or PM": "Starttid AM eller PM",
+  "End time AM or PM": "Sluttid AM eller PM",
+  "The change is shown here but could not be saved in the browser.": "Ändringen visas här men kunde inte sparas i webbläsaren.",
+  "Event saved locally.": "Aktiviteten är sparad lokalt.",
+  "Event deleted.": "Aktiviteten är borttagen.",
+  "Event saved to the online calendar.": "Aktiviteten är sparad i onlinekalendern.",
+  "Event saved, but the calendar could not be refreshed.": "Aktiviteten är sparad, men kalendern kunde inte uppdateras.",
+  "Event deleted from the online calendar.": "Aktiviteten är borttagen från onlinekalendern.",
+  "Enter an event.": "Skriv en aktivitet.",
+  "Enter a valid date as YYYY-MM-DD.": "Skriv ett giltigt datum som YYYY-MM-DD.",
+  "The end date cannot be before the start date.": "Slutdatum får inte vara före startdatum.",
+  "The end time must be after the start time for events ending on the same day.": "Sluttiden måste vara efter starttiden när aktiviteten slutar samma dag.",
+  "Larger touch targets. Swipe to see the rest of the month.": "Större tryckytor. Svep för att se resten av månaden.",
+  "Month overview. All days are visible at once.": "Månadsöversikt. Alla dagar syns samtidigt.",
+  "Use your browser's fullscreen mode or add to the home screen.": "Använd webbläsarens helskärmsläge eller lägg till på hemskärmen.",
+  "Fullscreen is not supported here. Try your browser's fullscreen mode.": "Helskärm stöds inte här. Prova webbläsarens helskärmsläge.",
+  "Clear the local calendar and reset the default columns? Online events are not affected.": "Töm den lokala kalendern och återställ standardkolumnerna? Onlinehändelser påverkas inte.",
+  "Local calendar reset.": "Den lokala kalendern är återställd.",
+  "Enter a name for the new column.": "Skriv ett namn för den nya kolumnen.",
+  "This name is already in use. Choose another name.": "Namnet används redan. Välj ett annat namn.",
+  "All columns need a name.": "Alla kolumner behöver ett namn.",
+  "Columns must have different names.": "Kolumnerna behöver ha olika namn.",
+  "Each column must have its own color.": "Varje kolumn behöver ha en egen färg.",
+  "Complete or cancel the removal first.": "Slutför eller avbryt borttagningen först.",
+  "Search for the city and select a result, or remove the weather city.": "Sök efter staden och välj en träff, eller ta bort väderstaden.",
+  "Select an outdoor sensor from the HA list.": "Välj en utomhusgivare från HA-listan.",
+  "Start the calendar server, connect a source and select a calendar first.": "Starta kalenderservern, anslut en kalenderkälla och välj en kalender först.",
+  "Settings saved locally.": "Inställningarna är sparade lokalt.",
+  "All 32 theme colors are in use. Free up a color before adding a column.": "Alla 32 temafärger används. En färg behöver bli ledig innan en ny kolumn kan läggas till.",
+  "At least one column is required": "Minst en kolumn behövs",
+  "Unnamed column": "Namnlös kolumn",
+  "No events are linked to this column.": "Inga aktiviteter är kopplade till kolumnen.",
+  "Move cancelled.": "Flyttningen avbröts.",
+  "Enter at least two characters.": "Skriv minst två tecken.",
+  "Searching…": "Söker…",
+  "Choose the correct city from the list.": "Välj rätt stad i listan.",
+  "No results. Try a city and country.": "Inga träffar. Prova stad och land.",
+  "Could not search for cities. Check your connection and try again.": "Kunde inte söka städer. Kontrollera internet och försök igen.",
+  "Press Search and select a result.": "Tryck Sök och välj en träff.",
+  "No city selected.": "Ingen stad vald.",
+  "Selected city: ": "Vald stad: ",
+  "Select outdoor sensor": "Välj utomhusgivare",
+  "HA connected. Choose the sensor located outside.": "HA anslutet. Välj den givare som sitter utomhus.",
+  "No HA connection. The sensor list is available through the included HA card.": "Ingen HA-anslutning. Givarlistan blir tillgänglig via det medföljande HA-kortet.",
+  "Weather service · model value": "Vädertjänsten · modellvärde",
+  "Weather unavailable · ": "Väder ej tillgängligt · ",
+  "Fetching today's weather for ": "Hämtar dagens väder för ",
+  " · Try Settings": " · Försök via Inställningar",
+  "The backup is downloading. Unsaved settings are not included.": "Säkerhetskopian laddas ned. Osparade inställningar ingår inte.",
+  "Replace this browser's calendar with the backup? Export first to keep the current data.": "Ersätt denna webbläsares kalender med säkerhetskopian? Exportera först om du vill behålla den nuvarande.",
+  "Could not import. Select a valid family-calendar backup (up to 5 MB).": "Kunde inte importera. Välj en giltig säkerhetskopia från familjekalendern (högst 5 MB).",
+  "Enter both start and end times, or leave both blank for an all-day event.": "Ange både start- och sluttid, eller lämna båda tomma för heldag.",
+  "Recurring event. Changes apply only to this occurrence.": "Återkommande aktivitet. Ändringar gäller bara detta tillfälle.",
+  "Participants' names are automatically added before the event title.": "Deltagarnas namn skrivs automatiskt före aktivitetens titel.",
+  "Changes are saved with the selected calendar provider.": "Ändringar sparas hos den valda kalenderleverantören.",
+  "Local event · Saved only in this browser.": "Lokal aktivitet · Sparas bara i denna webbläsare.",
+  "Refresh the calendar before editing.": "Uppdatera kalendern innan du redigerar.",
+  "Read-only event. Edit it with the calendar provider.": "Skrivskyddad händelse. Ändra den hos kalenderleverantören.",
+  "Delete only this occurrence? Other occurrences will be kept.": "Ta bort bara detta tillfälle? Övriga tillfällen behålls.",
+  "Delete this event from the online calendar?": "Ta bort aktiviteten från onlinekalendern?",
+  "No calendar sources connected.": "Inga kalenderkällor anslutna.",
+  "View and edit": "Visa och redigera",
+  "View and create": "Visa och skapa",
+  "Read only": "Enbart läsning",
+  "Disconnect this calendar source? Events with the provider will not be deleted.": "Koppla från kalenderkällan? Händelser hos leverantören raderas inte.",
+  "Redirect URI: ": "Returadress: ",
+  "Connecting…": "Ansluter…",
+  "Continue to Google and grant calendar access.": "Fortsätt till Google och godkänn kalenderåtkomst.",
+  "Connected. Choose calendars and save settings.": "Ansluten. Välj kalendrar och spara inställningarna.",
+  "Google connected. Choose calendars and save settings.": "Google anslutet. Välj kalendrar och spara inställningarna.",
+  "Fetching…": "Hämtar…",
+  "Could not refresh": "Kunde inte uppdatera",
+  " · showing the last fetched events": " · senast hämtade händelser visas",
+  "Updated ": "Uppdaterat ",
+  " · Including local events": " · Även lokala aktiviteter",
+  "Connect a calendar source in Settings": "Anslut en kalenderkälla i Inställningar",
+  "Open the calendar through the local server to use online calendars.": "Öppna kalendern via den lokala servern för att använda iCloud.",
+  "The calendar operation failed.": "Kalenderåtgärden misslyckades.",
+  "The calendar service timed out. Refresh before trying to save again.": "Kalendertjänsten svarade inte i tid. Uppdatera innan du försöker spara igen.",
+  "The calendar service returned an invalid response.": "Kalendertjänsten skickade ett ogiltigt svar.",
+  "Choose calendar": "Välj kalender",
+  "Selected calendar": "Vald kalender",
+  "Online calendars require the local server. See ONLINE-CALENDAR.md.": "Onlinekalender kräver den lokala servern. Se ONLINE-CALENDAR.md.",
+  "Start the server using the project's .venv/bin/python for calendar support.": "Starta servern med projektets .venv/bin/python för iCloud-stöd.",
+  "iCloud account connected. Choose a calendar and save settings.": "iCloud-konto anslutet. Välj kalender och spara inställningarna.",
+  "Ready to connect iCloud.": "Redo att ansluta iCloud.",
+  "Connecting to iCloud…": "Ansluter till iCloud…",
+  "Connected. Choose a calendar and save settings.": "Ansluten. Välj kalender och spara inställningarna.",
+  "Disconnect iCloud and remove the saved Apple credentials from the server? Your iCloud calendar will not be deleted.": "Koppla från iCloud och ta bort serverns sparade Apple-inloggning? Kalendern i iCloud raderas inte.",
+  "Home – existing style": "Home – befintlig profil",
+  "Sage – soft and green": "Salvia – mjukt & grönt",
+  "Ocean – blue contrast": "Hav – blå kontrast",
+  "Sand – paper calendar": "Sand – papperskalender",
+  "Plum – colorful": "Plommon – färgstarkt",
+  "Home – start dashboard": "Hem – Startdashboard",
+  "E-ink – clear and monochrome": "E-ink – tydligt & monokromt",
+  "Family calendar for ": "Familjekalender för ",
+  ". One row per day and one column per person, plus shared plans.": ". En rad per dag och en kolumn per person, samt gemensamma planer.",
+  "Edit column ": "Ändra kolumn ",
+  "Add an event for ": "Lägg till aktivitet för ",
+  " · multi-day event": " · flerdagarsaktivitet",
+  "Column name ": "Namn på kolumn ",
+  "Remove column ": "Ta bort kolumn ",
+  "Drag to reorder": "Dra för att ändra ordning",
+  "Change color": "Byt färg",
+  "Choose color for ": "Välj färg för ",
+  "Color for ": "Färg för ",
+  "column": "kolumnen",
+  " moved to position ": " flyttad till plats ",
+  " of ": " av ",
+  "Remove ": "Ta bort ",
+  " events are linked. Shared events keep their other participants.": " aktiviteter är kopplade. Delade aktiviteter behåller sina övriga deltagare.",
+  " individual events will be moved to the selected column.": " egna aktiviteter flyttas till vald kolumn.",
+  "Selected date: ": "Valt datum: ",
+  "Dates use YYYY-MM-DD.": "Datum anges som YYYY-MM-DD.",
+  " – used by ": " – används av ",
+  " · used by ": " · används av ",
+  " – selected": " – vald",
+  " · unavailable": " · ej tillgänglig",
+  " (not connected)": " (ej ansluten)",
+  "Swedish flag day: ": "Allmän flaggdag: ",
+  " · Swedish flag day": " · Allmän flaggdag",
+  " · Swedish public holiday": " · Allmän helgdag",
+  ", Swedish flag day": ", allmän flaggdag",
+  ", Swedish public holiday": ", allmän helgdag",
+  "New Year's Day": "Nyårsdagen",
+  "Twelfth Night": "Trettondagsafton",
+  "Epiphany": "Trettondedag jul",
+  "Walpurgis Night": "Valborgsmässoafton",
+  "May Day": "Första maj",
+  "Swedish National Day": "Nationaldagen",
+  "Saint Lucia's Day": "Lucia",
+  "Christmas Eve": "Julafton",
+  "Christmas Day": "Juldagen",
+  "Boxing Day": "Annandag jul",
+  "New Year's Eve": "Nyårsafton",
+  "Good Friday": "Långfredagen",
+  "Easter Eve": "Påskafton",
+  "Easter Sunday": "Påskdagen",
+  "Easter Monday": "Annandag påsk",
+  "Ascension Day": "Kristi himmelsfärdsdag",
+  "Pentecost Eve": "Pingstafton",
+  "Pentecost Sunday": "Pingstdagen",
+  "Whit Monday": "Annandag pingst",
+  "Midsummer Eve": "Midsommarafton",
+  "Midsummer Day": "Midsommardagen",
+  "All Saints' Day": "Alla helgons dag",
+  "First Sunday of Advent": "Första advent",
+  "Second Sunday of Advent": "Andra advent",
+  "Third Sunday of Advent": "Tredje advent",
+  "Fourth Sunday of Advent": "Fjärde advent",
+  "King's name day": "Kungens namnsdag",
+  "Crown Princess's name day": "Kronprinsessans namnsdag",
+  "King's birthday": "Kungens födelsedag",
+  "Crown Princess's birthday": "Kronprinsessans födelsedag",
+  "Queen's name day": "Drottningens namnsdag",
+  "United Nations Day": "FN-dagen",
+  "Gustavus Adolphus Day": "Gustav Adolfsdagen",
+  "Nobel Day": "Nobeldagen",
+  "Queen's birthday": "Drottningens födelsedag",
+  "Swedish Veterans Day": "Veterandagen",
+  "Swedish parliamentary election": "Riksdagsval",
+  "European Parliament election": "EU-val",
+  "Clear": "Klart",
+  "Mostly clear": "Mestadels klart",
+  "Partly cloudy": "Växlande molnighet",
+  "Overcast": "Mulet",
+  "Fog": "Dimma",
+  "Drizzle": "Duggregn",
+  "Rain": "Regn",
+  "Snow": "Snö",
+  "Rain showers": "Regnskurar",
+  "Snow showers": "Snöbyar",
+  "Thunderstorm": "Åska",
+  "Chance of rain ": "Nederbördsrisk ",
+  "Wind ": "Vind ",
+  "Last updated ": "Senast uppdaterad ",
+  "Sage": "Salvia",
+  "Deep teal": "Djup petrol",
+  "Terracotta": "Terrakotta",
+  "Cornflower": "Blåklint",
+  "Heather": "Ljung",
+  "Ochre": "Ockra",
+  "Forest green": "Skogsgrön",
+  "Eucalyptus": "Eukalyptus",
+  "Ocean blue": "Havsblå",
+  "Slate": "Skiffer",
+  "Midnight blue": "Midnattsblå",
+  "Muted indigo": "Dämpad indigo",
+  "Mauve": "Malva",
+  "Plum": "Plommon",
+  "Rosewood": "Rosenträ",
+  "Brick": "Tegel",
+  "Cinnamon": "Kanel",
+  "Earth": "Jord",
+  "Mustard": "Senap",
+  "Olive": "Oliv",
+  "Moss": "Mossa",
+  "Spruce": "Gran",
+  "Storm blue": "Stormblå",
+  "Lavender gray": "Lavendelgrå",
+  "Dusty rose": "Dammrosa",
+  "Burgundy": "Vinröd",
+  "Bronze": "Brons",
+  "Warm gray": "Varmgrå",
+  "Stone": "Sten",
+  "The calendar denied access. Check the connection and permissions.": "Kalendern nekade åtkomst. Kontrollera anslutning och behörighet.",
+  "The calendar service could not be reached. Check the server address and connection.": "Kalendertjänsten kunde inte nås. Kontrollera serveradressen och anslutningen.",
+  "Could not fetch the calendar. Check the connection.": "Kunde inte hämta kalendern. Kontrollera anslutningen.",
+  "The event has changed. Refresh the calendar and try again.": "Händelsen har ändrats. Uppdatera kalendern och försök igen.",
+  "Reload the page and try again.": "Ladda om sidan och försök igen.",
+  "The data could not be parsed. Check the form.": "Uppgifterna kunde inte tolkas. Kontrollera formuläret.",
+  "Enter a valid server address.": "Ange en giltig serveradress.",
+  "Enter a username and password.": "Ange användarnamn och lösenord.",
+  "Enter a Home Assistant long-lived access token.": "Ange en långlivad åtkomsttoken från Home Assistant.",
+  "Enter your Google OAuth Client ID and Client secret.": "Ange Googles OAuth Client ID och Client secret.",
+  "Enter a valid time zone.": "Ange en giltig tidszon.",
+  "This calendar is read only.": "Kalendern är skrivskyddad.",
+  "This calendar does not support this change. Open it with the provider.": "Kalendern stöder inte denna ändring. Öppna den hos leverantören.",
+  "Select the calendar in Settings first.": "Välj kalendern i Inställningar först.",
+  "The calendar service could not be reached or denied the operation. Check its connection and permissions.": "Kalendertjänsten kunde inte nås eller nekade åtgärden. Kontrollera anslutningen och kalenderns behörighet.",
+  "iCloud denied login. Check your Apple ID and app-specific password.": "iCloud nekade inloggningen. Kontrollera Apple-ID och appspecifikt lösenord.",
+  " · all day": " · heldag",
+  ". Edit event.": ". Redigera aktivitet.",
+  ", today": ", idag",
+  "Today's forecast · ": "Dagens prognos · ",
+  "Wind up to ": "Vind upp till ",
+  "Saved forecast · Open-Meteo": "Sparad prognos · Open-Meteo",
+  "Saved forecast, unable to refresh": "Sparad prognos, kan inte uppdatera",
+  "HA sensor · no connection": "HA-givare · ingen anslutning",
+  "HA sensor not found": "HA-givaren saknas",
+  "HA sensor · ": "HA-givare · ",
+  "Current temperature unavailable": "Aktuell temperatur saknas",
+  "Create a token in your HA profile. Available actions depend on the calendar and your HA permissions.": "Skapa en token i din HA-profil. Tillgängliga åtgärder följer kalenderns stöd och dina behörigheter i HA.",
+  "HA denied the WebSocket connection.": "HA nekade WebSocket-anslutningen.",
+  "HA rejected the change. Check the calendar capabilities and permissions.": "HA tillät inte ändringen. Kontrollera kalenderns stöd och behörighet.",
+  "HA did not respond to the change.": "HA skickade inget svar på ändringen.",
+  "The HA calendar connection could not complete the change. Refresh before trying again.": "HA:s kalenderanslutning kunde inte slutföra ändringen. Uppdatera innan du försöker igen.",
+  "The event has no valid HA reference.": "Händelsen saknar en giltig HA-referens.",
+  "Use an http or https address without credentials in the URL.": "Använd en http- eller https-adress utan inloggningsuppgifter i adressen.",
+  "The calendar response is too large.": "Kalendersvaret är för stort.",
+  "Enter a valid date range of up to 95 days.": "Ange ett giltigt datumintervall på högst 95 dagar.",
+  "Invalid event reference.": "Ogiltig händelsereferens.",
+  "The calendar source does not exist.": "Kalenderkällan finns inte.",
+  "Choose a calendar provider.": "Välj en kalenderleverantör.",
+  "Google sign-in expired or was cancelled. Try again.": "Google-inloggningen har gått ut eller avbrutits. Försök igen.",
+  "Google did not grant persistent access. Reconnect and grant calendar access.": "Google gav ingen beständig åtkomst. Anslut igen och godkänn kalenderåtkomst.",
+  "Too many calendars in the account.": "För många kalendrar i kontot.",
+  "Choose an iCloud calendar.": "Välj en iCloud-kalender.",
+  "Invalid calendar selection.": "Ogiltigt kalenderurval.",
+  "Too many calendar events.": "För många kalenderhändelser.",
+  "Enter an event with up to 512 characters.": "Ange en aktivitet med högst 512 tecken.",
+  "Invalid save reference.": "Ogiltig referens för sparningen.",
+  "Refresh the calendar before changing the event.": "Uppdatera kalendern innan du ändrar händelsen.",
+  "The save reference is already in use.": "Sparreferensen används redan.",
+  "Enter your Apple ID and an app-specific password.": "Ange ditt Apple-ID och ett appspecifikt lösenord.",
+  "Connect an iCloud account in Settings.": "Anslut ett iCloud-konto i Inställningar.",
+  "Choose which iCloud calendar to use.": "Välj vilken iCloud-kalender som ska användas.",
+  "The event has been deleted in iCloud. Refresh the calendar.": "Händelsen har tagits bort i iCloud. Uppdatera kalendern.",
+  "Could not read the calendar event.": "Kunde inte läsa händelsen från kalendern.",
+  "The server provides no version information. The event will not be changed.": "Servern saknar versionsinformation. Händelsen ändras inte.",
+  "The event has changed in iCloud. Refresh and reopen it before saving.": "Händelsen har ändrats i iCloud. Uppdatera och öppna den igen innan du sparar.",
+  "The calendar rejected the change. Check its permissions.": "Kalendern tillät inte ändringen. Kontrollera behörigheten till kalendern.",
+  "This time does not exist because of the daylight-saving change. Choose another time.": "Klockslaget finns inte denna dag på grund av sommartidsbytet. Välj en annan tid.",
+  "Check the dates and times. Enter both start and end times, or leave both blank for all day.": "Kontrollera datum och tider. Ange både start- och sluttid, eller lämna båda tomma för heldag.",
+  "Connected as: ": "Ansluten som: ",
+  "Shared": "Gemensamt",
+  "Swedish": "Svenska",
+  "Install the calendar libraries as described in ONLINE-CALENDAR.md.": "Installera serverns kalenderbibliotek enligt ONLINE-CALENDAR.md.",
+  "Choose a valid IANA time zone, for example Europe/Stockholm.": "Välj en giltig IANA-tidszon, exempelvis Europe/Stockholm.",
+  "The calendar is not in the account's calendar list.": "Kalendern finns inte i kontots kalenderlista.",
+  "The event reference is not valid for the selected calendar.": "Händelsereferensen är inte giltig för den valda kalendern.",
+  "The calendar event is too large.": "Kalenderhändelsen är för stor.",
+  "The event mixes date and date-time values.": "Händelsen har blandade datum- och tidsvärden.",
+  "Too many events in the range. Select fewer calendars or a shorter range.": "För många händelser i intervallet. Välj färre kalendrar eller kortare intervall.",
+  "The event title must contain 1–512 characters.": "Aktivitetens titel behöver vara 1–512 tecken.",
+  "This save request was already completed with different data. Refresh the calendar before trying again.": "Sparningen har redan genomförts med andra uppgifter. Uppdatera kalendern innan du försöker igen.",
+  "The event has changed in iCloud. Refresh the calendar and reopen it.": "Händelsen har ändrats i iCloud. Uppdatera kalendern och öppna den igen.",
+  "The event no longer exists.": "Händelsen finns inte längre.",
+  "Could not find the recurring occurrence.": "Kunde inte hitta det återkommande tillfället.",
+  "The event was changed concurrently in iCloud. Refresh and try again.": "Händelsen ändrades samtidigt i iCloud. Uppdatera och försök igen.",
+  "Could not delete the calendar event.": "Kunde inte ta bort händelsen i kalendern.",
+  "Invalid host address.": "Ogiltig värdadress.",
+  "The request comes from another website.": "Begäran kommer från en annan webbplats.",
+  "Invalid origin.": "Ogiltigt ursprung.",
+  "Invalid request.": "Ogiltig begäran.",
+  "Send a valid JSON request.": "Skicka en giltig JSON-begäran.",
+  "Invalid data.": "Ogiltiga uppgifter.",
+  "The API endpoint does not exist.": "API-funktionen finns inte.",
+  "Hostname in the HTTPS address, without a scheme or port.": "Värdnamnet i HTTPS-adressen, utan protokoll eller port.",
+  "Network access requires HEMMA_HTTP_USERNAME/HEMMA_HTTP_PASSWORD and TLS or --behind-https-proxy. Use localhost for local access.": "Nätverksåtkomst kräver HEMMA_HTTP_USERNAME/HEMMA_HTTP_PASSWORD och TLS eller --behind-https-proxy. Använd localhost för lokal körning.",
+  "The credentials file must be outside the dist directory.": "Inloggningsfilen måste ligga utanför dist-mappen.",
+  "Family Planner with online calendars": "Familjekalender med iCloud",
+  "Family Planner: ": "Familjekalender: ",
+  "Family Planner": "Familjekalender",
+  "Family Planner must use the same origin as HA, for example /local/familjekalender/index.html.": "Familjekalendern måste ligga på samma adress som HA, exempelvis /local/familjekalender/index.html.",
+  "Family calendar with outdoor temperature sensors from Home Assistant": "Familjekalender med utomhusgivare från Home Assistant",
+  "The calendar service could not complete the operation (HTTP ": "Kalendertjänsten kunde inte slutföra åtgärden (HTTP ",
+  "(Untitled)": "(Utan titel)",
+  "Dentist": "Tandläkare",
+  "Family dinner": "Familjemiddag",
+  "Autumn break": "Höstlov",
+  "Long event": "Lång aktivitet",
+  "Shared event": "Gemensam aktivitet",
+  "Short event": "Kort aktivitet",
+  "Extra event": "Extra aktivitet",
+  "Short opening event": "Kort inledning",
+  "Across the month boundary": "Över månadsskiftet",
+  "Updated shared event": "Ändrad gemensam aktivitet",
+  "Autumn trip": "Höstlovsresa",
+  "Family visit": "Besök från familjen",
+  "Person 5 - Autumn break": "Person 5 - Höstlov",
+  "Person 5 - Weekly practice": "Person 5 - Veckoträning",
+  "Keep the description": "Behåll beskrivningen",
+  "Sports hall": "Sporthallen",
+  "Person 5 - Rescheduled practice": "Person 5 - Flyttad träning",
+  "Person 5 - Late hour": "Person 5 - Sen timme",
+  "Person 5 - Updated late hour": "Person 5 - Sen timme ändrad",
+  "Person 5 - Save once": "Person 5 - Spara en gång",
+  "Person 5 - Do not overwrite": "Person 5 - Överskriv inte",
+  "Person 5 - Updated": "Person 5 - Ändrad",
+  "Person 5 - Dance": "Person 5 - Dans",
+  "Person 5, Person 4 - Cinema": "Person 5, Person 4 - Bio",
+  "Guest, Person 5 - Visit": "Sven, Person 5 - Besök",
+  "Person 5 - Home - Planning": "Person 5 - Hemma - Planering",
+  "Person 5, Person 4 - Autumn break": "Person 5, Person 4 - Höstlov",
+  "Person 5 - Break": "Person 5 - Lov",
+  "Person 4 - HA Dance": "Person 4 - HA Dans",
+  "Test error": "Testfel",
+  "Choose month": "Välj månad"
+};
 
 const initialTextNodes=[],initialAttributes=[];
 {
@@ -690,9 +1167,9 @@ const initialTextNodes=[],initialAttributes=[];
   for(const name of ['aria-label','placeholder','title'])if(el.hasAttribute(name))initialAttributes.push({el,name,original:el.getAttribute(name)});
  }
 }
-function msg(value){return document.documentElement.lang==='en'?(englishMessages[value]??value):value}
+function msg(value){return document.documentElement.lang==='sv'?(swedishMessages[value]??value):value}
 function locale(){return document.documentElement.lang==='en'?'en-GB':'sv-SE'}
-function setLanguage(language){document.documentElement.lang=language==='en'?'en':'sv'}
+function setLanguage(language){document.documentElement.lang=language==='sv'?'sv':'en'}
 function applyStaticLanguage(){
  for(const {node,original} of initialTextNodes){
   if(node.isConnected)node.data=original.replace(original.trim(),msg(original.trim()));
@@ -708,27 +1185,27 @@ function applyStaticLanguage(){
 <script>
 'use strict';
 const defaultPeople=[
-{id:'family',name:'Gemensamt',initial:'VI',color:'#5e7359'},
+{id:'family',name:"Shared",initial:'SH',color:'#5e7359'},
 {id:'person-1',name:'Person 1',initial:'P1',color:'#2e6377'},
 {id:'person-2',name:'Person 2',initial:'P2',color:'#936248'},
 {id:'person-3',name:'Person 3',initial:'P3',color:'#5b729d'},
 {id:'person-4',name:'Person 4',initial:'P4',color:'#906286'},
 {id:'person-5',name:'Person 5',initial:'P5',color:'#927424'}
 ];
-const colorPalette=[{"name": "Salvia", "color": "#5e7359"}, {"name": "Djup petrol", "color": "#2e6377"}, {"name": "Terrakotta", "color": "#936248"}, {"name": "Blåklint", "color": "#5b729d"}, {"name": "Ljung", "color": "#906286"}, {"name": "Ockra", "color": "#927424"}, {"name": "Skogsgrön", "color": "#3e6655"}, {"name": "Eukalyptus", "color": "#467773"}, {"name": "Havsblå", "color": "#375b72"}, {"name": "Skiffer", "color": "#536477"}, {"name": "Midnattsblå", "color": "#404d6e"}, {"name": "Dämpad indigo", "color": "#625b81"}, {"name": "Malva", "color": "#7b5e7c"}, {"name": "Plommon", "color": "#7c5068"}, {"name": "Rosenträ", "color": "#9a636b"}, {"name": "Tegel", "color": "#9a574b"}, {"name": "Kanel", "color": "#9b6a46"}, {"name": "Jord", "color": "#7d624c"}, {"name": "Senap", "color": "#8b773e"}, {"name": "Oliv", "color": "#6e7449"}, {"name": "Mossa", "color": "#607c51"}, {"name": "Gran", "color": "#38645f"}, {"name": "Petrol", "color": "#356c78"}, {"name": "Stormblå", "color": "#597d88"}, {"name": "Denim", "color": "#456c94"}, {"name": "Lavendelgrå", "color": "#7e7597"}, {"name": "Dammrosa", "color": "#a06f85"}, {"name": "Vinröd", "color": "#79474f"}, {"name": "Brons", "color": "#85714d"}, {"name": "Varmgrå", "color": "#746d60"}, {"name": "Sten", "color": "#677369"}, {"name": "Bark", "color": "#6f574c"}];
+const colorPalette=[{"name": "Sage", "color": "#5e7359"}, {"name": "Deep teal", "color": "#2e6377"}, {"name": "Terracotta", "color": "#936248"}, {"name": "Cornflower", "color": "#5b729d"}, {"name": "Heather", "color": "#906286"}, {"name": "Ochre", "color": "#927424"}, {"name": "Forest green", "color": "#3e6655"}, {"name": "Eucalyptus", "color": "#467773"}, {"name": "Ocean blue", "color": "#375b72"}, {"name": "Slate", "color": "#536477"}, {"name": "Midnight blue", "color": "#404d6e"}, {"name": "Muted indigo", "color": "#625b81"}, {"name": "Mauve", "color": "#7b5e7c"}, {"name": "Plum", "color": "#7c5068"}, {"name": "Rosewood", "color": "#9a636b"}, {"name": "Brick", "color": "#9a574b"}, {"name": "Cinnamon", "color": "#9b6a46"}, {"name": "Earth", "color": "#7d624c"}, {"name": "Mustard", "color": "#8b773e"}, {"name": "Olive", "color": "#6e7449"}, {"name": "Moss", "color": "#607c51"}, {"name": "Spruce", "color": "#38645f"}, {"name": "Petrol", "color": "#356c78"}, {"name": "Storm blue", "color": "#597d88"}, {"name": "Denim", "color": "#456c94"}, {"name": "Lavender gray", "color": "#7e7597"}, {"name": "Dusty rose", "color": "#a06f85"}, {"name": "Burgundy", "color": "#79474f"}, {"name": "Bronze", "color": "#85714d"}, {"name": "Warm gray", "color": "#746d60"}, {"name": "Stone", "color": "#677369"}, {"name": "Bark", "color": "#6f574c"}];
 const sharedColor='#6b3fa0';
 let people=defaultPeople.map(p=>({...p}));
 const $=id=>document.getElementById(id);
 let now=new Date(),todayKey=key(now);
 let month=new Date(now.getFullYear(),now.getMonth(),1),editing=null,touch=false,toastTimer,activeDate=null,activePerson=null,lastStart=null;
 const visualThemes=[
- {id:'home',name:'Home – befintlig profil'},
- {id:'sage',name:'Salvia – mjukt & grönt'},
- {id:'ocean',name:'Hav – blå kontrast'},
- {id:'sand',name:'Sand – papperskalender'},
- {id:'plum',name:'Plommon – färgstarkt'},
- {id:'start',name:'Hem – Startdashboard'},
- {id:'eink',name:'E-ink – tydligt & monokromt'},
+ {id:'home',name:"Home – existing style"},
+ {id:'sage',name:"Sage – soft and green"},
+ {id:'ocean',name:"Ocean – blue contrast"},
+ {id:'sand',name:"Sand – paper calendar"},
+ {id:'plum',name:"Plum – colorful"},
+ {id:'start',name:"Home – start dashboard"},
+ {id:'eink',name:"E-ink – clear and monochrome"},
  {id:'ios',name:'iOS – Liquid Glass'}
 ];
 let appearance={theme:'home',mode:'light'};
@@ -739,9 +1216,9 @@ try{
  }
 }catch{}
 
-let preferences={timeFormat:'24h',temperatureUnit:'celsius',weatherLocation:null,temperatureSource:'weather',temperatureEntity:'',language:'sv',calendarMode:'local',onlineFallback:'family'};
+let preferences={timeFormat:'24h',temperatureUnit:'celsius',weatherLocation:null,temperatureSource:'weather',temperatureEntity:'',language:'en',calendarMode:'local',onlineFallback:'family'};
 function validLocation(v){return !!v&&typeof v.name==='string'&&v.name.length<=200&&Number.isFinite(v.latitude)&&Math.abs(v.latitude)<=90&&Number.isFinite(v.longitude)&&Math.abs(v.longitude)<=180}
-function cleanPreferences(v){return {language:v?.language==='en'?'en':'sv',timeFormat:v?.timeFormat==='12h'?'12h':'24h',temperatureUnit:v?.temperatureUnit==='fahrenheit'?'fahrenheit':'celsius',weatherLocation:validLocation(v?.weatherLocation)?v.weatherLocation:null,temperatureSource:v?.temperatureSource==='ha'?'ha':'weather',temperatureEntity:typeof v?.temperatureEntity==='string'&&/^sensor\.[a-z0-9_]+$/.test(v.temperatureEntity)?v.temperatureEntity:'',calendarMode:['icloud','mixed'].includes(v?.calendarMode)?v.calendarMode:'local',onlineFallback:typeof v?.onlineFallback==='string'?v.onlineFallback:'family'}}
+function cleanPreferences(v){return {language:v?.language==='sv'?'sv':'en',timeFormat:v?.timeFormat==='12h'?'12h':'24h',temperatureUnit:v?.temperatureUnit==='fahrenheit'?'fahrenheit':'celsius',weatherLocation:validLocation(v?.weatherLocation)?v.weatherLocation:null,temperatureSource:v?.temperatureSource==='ha'?'ha':'weather',temperatureEntity:typeof v?.temperatureEntity==='string'&&/^sensor\.[a-z0-9_]+$/.test(v.temperatureEntity)?v.temperatureEntity:'',calendarMode:['icloud','mixed'].includes(v?.calendarMode)?v.calendarMode:'local',onlineFallback:typeof v?.onlineFallback==='string'?v.onlineFallback:'family'}}
 let onlineState={sources:[],sourceErrors:[],available:false,ready:false,configured:false,calendarId:'',calendarName:'',timezone:'Europe/Stockholm',csrf:'',calendars:[],records:[],monthKey:'',requestedKey:'',loading:false,stale:false,error:'',updated:null};
 let editingOnline=null,onlineBusy=false,onlineRequest=0,onlineCreateKey=null;
 let savedState=null;
@@ -757,6 +1234,10 @@ if(savedState?.appearance){
  if(['light','dark'].includes(savedState.appearance.mode))appearance.mode=savedState.appearance.mode;
 }
 preferences=cleanPreferences(savedState?.preferences);
+if(savedState&&savedState.version<3){
+ preferences.language='en';
+ people=people.map(p=>p.id==='family'&&p.name===String.fromCharCode(71,101,109,101,110,115,97,109,116)?{...p,name:'Shared',initial:'SH'}:p);
+}
 setLanguage(preferences.language);
 people=distinctColumnColors(people);
 function colorRgb(hex){return [1,3,5].map(index=>parseInt(hex.slice(index,index+2),16))}
@@ -790,8 +1271,8 @@ let events;
 try{
  const data=savedState?savedState.events:JSON.parse(localStorage.getItem(storageKey)||'null');
  events=Array.isArray(data)?data.filter(e=>e&&typeof e.title==='string'&&validDate(e.date)&&participants(e).length).map(e=>({...e,people:participants(e),endDate:validDate(e.endDate)&&e.endDate>=e.date?e.endDate:e.date})):seed();
-}catch{events=seed();$('storage-note').textContent='Lokal kalender · Ändringar sparas under denna visning'}
-function persist(){try{localStorage.setItem(stateKey,JSON.stringify({version:2,people,events,appearance,preferences}))}catch{notify(msg('Ändringen visas här men kunde inte sparas i webbläsaren.'))}}
+}catch{events=seed();$('storage-note').textContent="Local calendar · Changes kept during this session"}
+function persist(){try{localStorage.setItem(stateKey,JSON.stringify({version:3,people,events,appearance,preferences}))}catch{notify(msg("The change is shown here but could not be saved in the browser."))}}
 function notify(text){$('toast').textContent=text;$('toast').classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.add('hidden'),3500)}
 function weekNumber(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7)}
 function fit(){
@@ -806,7 +1287,7 @@ function dateLabel(value){return value}
 function describe(e){
  const range=endDateOf(e)!==e.date;
  return e.title+' · '+participants(e).map(id=>people.find(p=>p.id===id).name).join(', ')+' · '+(range?dateLabel(e.date)+'–'+dateLabel(endDateOf(e)):dateLabel(e.date))+
-  ((e.time||e.end)?' · '+formatTime(e.time||'00:00')+(e.end?'–'+formatTime(e.end):''):msg(' · heldag'));
+  ((e.time||e.end)?' · '+formatTime(e.time||'00:00')+(e.end?'–'+formatTime(e.end):''):msg(" · all day"));
 }
 function layout(person){
  const sorted=calendarEvents().filter(e=>participants(e).includes(person)).slice().sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||'')||a.id.localeCompare(b.id));
@@ -838,12 +1319,12 @@ function cellContent(cell,date,p,groups){
   const slot=visibleSlots[lane],b=document.createElement('button');
   b.type='button';b.dataset.lane=lane;
   if(!slot){
-   b.className='empty-slot';b.setAttribute('aria-label',msg('Lägg till aktivitet för ')+p.name+', '+dateLabel(date));b.addEventListener('click',()=>openCell(date,p.id));cell.append(b);continue;
+   b.className='empty-slot';b.setAttribute('aria-label',msg("Add an event for ")+p.name+', '+dateLabel(date));b.addEventListener('click',()=>openCell(date,p.id));cell.append(b);continue;
   }
   const e=slot.event,range=endDateOf(e)!==e.date,ids=participants(e),shared=ids.length>1;
   const firstVisible=e.date>key(month)?e.date:key(month),showLabel=!range||(date===firstVisible&&p.id===people.find(p=>ids.includes(p.id)).id);
   b.className='event';b.dataset.eventId=e.id;if(e.online)b.dataset.source='online';
-  b.title=describe(e);b.setAttribute('aria-label',p.name+': '+describe(e)+msg('. Redigera aktivitet.'));
+  b.title=describe(e);b.setAttribute('aria-label',p.name+': '+describe(e)+msg(". Edit event."));
   if(shared){b.classList.add('shared');b.style.setProperty('--person',sharedColor)}
   if(range){b.style.setProperty('--range-tone',rangeTone(e.id));cell.classList.add('has-range');b.classList.add('range',date===e.date?'range-start':date===endDateOf(e)?'range-end':'range-middle')}
   const content=document.createElement('span');content.className='event-content';
@@ -879,38 +1360,38 @@ function swedishCalendar(year){
   dates.set(value,info);
  }
  const fixed=(month,day,name,holiday=false,flag=false)=>add(new Date(year,month-1,day,12),name,holiday,flag);
- fixed(1,1,'Nyårsdagen',true,true);fixed(1,5,'Trettondagsafton');fixed(1,6,'Trettondedag jul',true);
- fixed(4,30,'Valborgsmässoafton');fixed(5,1,'Första maj',true,true);
- fixed(6,6,'Nationaldagen',year>=2005,true);
- fixed(12,13,'Lucia');fixed(12,24,'Julafton');fixed(12,25,'Juldagen',true,true);fixed(12,26,'Annandag jul',true);fixed(12,31,'Nyårsafton');
+ fixed(1,1,"New Year's Day",true,true);fixed(1,5,"Twelfth Night");fixed(1,6,"Epiphany",true);
+ fixed(4,30,"Walpurgis Night");fixed(5,1,"May Day",true,true);
+ fixed(6,6,"Swedish National Day",year>=2005,true);
+ fixed(12,13,"Saint Lucia's Day");fixed(12,24,"Christmas Eve");fixed(12,25,"Christmas Day",true,true);fixed(12,26,"Boxing Day",true);fixed(12,31,"New Year's Eve");
  const easter=easterSunday(year);
- add(calendarOffset(easter,-2),'Långfredagen',true);add(calendarOffset(easter,-1),'Påskafton');
- add(easter,'Påskdagen',true,true);add(calendarOffset(easter,1),'Annandag påsk',true);
- add(calendarOffset(easter,39),'Kristi himmelsfärdsdag',true);add(calendarOffset(easter,48),'Pingstafton');
- add(calendarOffset(easter,49),'Pingstdagen',true,true);
- if(year<2005)add(calendarOffset(easter,50),'Annandag pingst',true);
+ add(calendarOffset(easter,-2),"Good Friday",true);add(calendarOffset(easter,-1),"Easter Eve");
+ add(easter,"Easter Sunday",true,true);add(calendarOffset(easter,1),"Easter Monday",true);
+ add(calendarOffset(easter,39),"Ascension Day",true);add(calendarOffset(easter,48),"Pentecost Eve");
+ add(calendarOffset(easter,49),"Pentecost Sunday",true,true);
+ if(year<2005)add(calendarOffset(easter,50),"Whit Monday",true);
  const midsummer=weekdayOnOrAfter(year,5,20,6);
- add(calendarOffset(midsummer,-1),'Midsommarafton');add(midsummer,'Midsommardagen',true,true);
- add(weekdayOnOrAfter(year,9,31,6),'Alla helgons dag',true);
+ add(calendarOffset(midsummer,-1),"Midsummer Eve");add(midsummer,"Midsummer Day",true,true);
+ add(weekdayOnOrAfter(year,9,31,6),"All Saints' Day",true);
  const advent=weekdayOnOrAfter(year,10,27,0);
- ['Första advent','Andra advent','Tredje advent','Fjärde advent'].forEach((name,i)=>add(calendarOffset(advent,i*7),name));
+ ["First Sunday of Advent","Second Sunday of Advent","Third Sunday of Advent","Fourth Sunday of Advent"].forEach((name,i)=>add(calendarOffset(advent,i*7),name));
  for(const [month,day,name] of [
-  [1,28,'Kungens namnsdag'],[3,12,'Kronprinsessans namnsdag'],[4,30,'Kungens födelsedag'],
-  [7,14,'Kronprinsessans födelsedag'],[8,8,'Drottningens namnsdag'],[10,24,'FN-dagen'],
-  [11,6,'Gustav Adolfsdagen'],[12,10,'Nobeldagen'],[12,23,'Drottningens födelsedag']
+  [1,28,"King's name day"],[3,12,"Crown Princess's name day"],[4,30,"King's birthday"],
+  [7,14,"Crown Princess's birthday"],[8,8,"Queen's name day"],[10,24,"United Nations Day"],
+  [11,6,"Gustavus Adolphus Day"],[12,10,"Nobel Day"],[12,23,"Queen's birthday"]
  ])fixed(month,day,name,false,true);
- if(year>=2018)fixed(5,29,'Veterandagen',false,true);
+ if(year>=2018)fixed(5,29,"Swedish Veterans Day",false,true);
  if(year>=2002&&(year-2002)%4===0){
   const firstSunday=weekdayOnOrAfter(year,8,1,0);
-  add(calendarOffset(firstSunday,year>=2014?7:14),'Riksdagsval',false,true);
+  add(calendarOffset(firstSunday,year>=2014?7:14),"Swedish parliamentary election",false,true);
  }
- if(swedishEuElectionDates[year])add(swedishEuElectionDates[year],'EU-val',false,true);
+ if(swedishEuElectionDates[year])add(swedishEuElectionDates[year],"European Parliament election",false,true);
  swedishCalendarCache.set(year,dates);return dates;
 }
 function swedishFlag(reason){
  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
- svg.classList.add('holiday-flag');svg.setAttribute('viewBox','0 0 16 10');svg.setAttribute('role','img');svg.setAttribute('aria-label',msg('Allmän flaggdag: ')+reason);
- const title=document.createElementNS(ns,'title');title.textContent=msg('Allmän flaggdag: ')+reason;svg.append(title);
+ svg.classList.add('holiday-flag');svg.setAttribute('viewBox','0 0 16 10');svg.setAttribute('role','img');svg.setAttribute('aria-label',msg("Swedish flag day: ")+reason);
+ const title=document.createElementNS(ns,'title');title.textContent=msg("Swedish flag day: ")+reason;svg.append(title);
  for(const [x,y,width,height,fill] of [[0,0,16,10,'#006aa7'],[5,0,2,10,'#fecc00'],[0,4,16,2,'#fecc00']]){
   const rect=document.createElementNS(ns,'rect');for(const [name,value] of Object.entries({x,y,width,height,fill}))rect.setAttribute(name,value);svg.append(rect);
  }
@@ -921,9 +1402,9 @@ function render(){
  $('table').style.minWidth=Math.max(680,148+people.length*88)+'px';
  const name=month.toLocaleDateString(locale(),{month:'long'});$('month-title').replaceChildren(document.createTextNode(name.charAt(0).toUpperCase()+name.slice(1)+' '));
  const year=document.createElement('span');year.className='year';year.textContent=month.getFullYear();$('month-title').append(year);
- $('caption').textContent=msg('Familjekalender för ')+name+' '+month.getFullYear()+msg('. En rad per dag och en kolumn per person, samt gemensamma planer.');
- $('people').replaceChildren();const dayHead=document.createElement('th');dayHead.scope='col';dayHead.textContent=msg('Dag');$('people').append(dayHead);
- people.forEach(p=>{const th=document.createElement('th');th.scope='col';th.style.setProperty('--person',p.color);const wrap=document.createElement('button');wrap.type='button';wrap.className='person column-heading';wrap.setAttribute('aria-label',msg('Ändra kolumn ')+p.name);wrap.title=p.name;wrap.addEventListener('click',()=>openColumns(p.id));const avatar=document.createElement('span');avatar.className='avatar';avatar.setAttribute('aria-hidden','true');avatar.textContent=p.initial;const label=document.createElement('span');label.textContent=p.name;label.className='column-name';wrap.append(avatar,label);th.append(wrap);$('people').append(th)});
+ $('caption').textContent=msg("Family calendar for ")+name+' '+month.getFullYear()+msg(". One row per day and one column per person, plus shared plans.");
+ $('people').replaceChildren();const dayHead=document.createElement('th');dayHead.scope='col';dayHead.textContent=msg("Day");$('people').append(dayHead);
+ people.forEach(p=>{const th=document.createElement('th');th.scope='col';th.style.setProperty('--person',p.color);const wrap=document.createElement('button');wrap.type='button';wrap.className='person column-heading';wrap.setAttribute('aria-label',msg("Edit column ")+p.name);wrap.title=p.name;wrap.addEventListener('click',()=>openColumns(p.id));const avatar=document.createElement('span');avatar.className='avatar';avatar.setAttribute('aria-hidden','true');avatar.textContent=p.initial;const label=document.createElement('span');label.textContent=p.name;label.className='column-name';wrap.append(avatar,label);th.append(wrap);$('people').append(th)});
  const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();$('days').replaceChildren();const layouts=Object.fromEntries(people.map(p=>[p.id,layout(p.id)])),specialDates=swedishCalendar(month.getFullYear());
  for(let day=1;day<=days;day++){
   const date=new Date(month.getFullYear(),month.getMonth(),day),dateKey=key(date),tr=document.createElement('tr'),th=document.createElement('th');
@@ -937,10 +1418,10 @@ function render(){
    th.classList.add('special-date');
    if(special.flag)label.append(swedishFlag(special.flagReasons.map(msg).join(', ')));
    const name=document.createElement('span');name.className='holiday-name';name.textContent=msg(special.names[0]);label.append(name);
-   th.title=special.names.map(msg).join(' · ')+(special.holiday?msg(' · Allmän helgdag'):'')+(special.flag?msg(' · Allmän flaggdag'):'');
+   th.title=special.names.map(msg).join(' · ')+(special.holiday?msg(" · Swedish public holiday"):'')+(special.flag?msg(" · Swedish flag day"):'');
   }
   if(date.getDay()===1){const week=document.createElement('span');week.className='week';week.textContent=(preferences.language==='en'?'W':'v')+weekNumber(date);label.append(week)}
-  th.setAttribute('aria-label',dateKey+(dateKey===todayKey?msg(', idag'):'')+(special?', '+special.names.map(msg).join(', '):'')+(isHoliday?msg(', allmän helgdag'):'')+(special?.flag?msg(', allmän flaggdag'):''));th.append(label);tr.append(th);
+  th.setAttribute('aria-label',dateKey+(dateKey===todayKey?msg(", today"):'')+(special?', '+special.names.map(msg).join(', '):'')+(isHoliday?msg(", Swedish public holiday"):'')+(special?.flag?msg(", Swedish flag day"):''));th.append(label);tr.append(th);
   people.forEach(p=>{
    const td=document.createElement('td'),cell=document.createElement('div');td.style.setProperty('--person',p.color);cell.className='cell';cell.dataset.date=dateKey;cell.dataset.person=p.id;
    cellContent(cell,dateKey,p,layouts[p.id]);td.append(cell);tr.append(td);
@@ -966,8 +1447,8 @@ function openEvent(event,date,person){
  activeDate=date;activePerson=person;fill(event);if(!$('editor').open)$('editor').showModal();
 }
 function fill(event){
- editingOnline=event.online?event:null;onlineCreateKey=event.id?null:crypto.randomUUID();editing=event.id||null;$('editor-title').textContent=editing?msg('Redigera aktivitet'):msg('Ny aktivitet');
- $('editor-sub').textContent=endDateOf(event)!==event.date?dateLabel(event.date)+' – '+dateLabel(endDateOf(event))+msg(' · flerdagarsaktivitet'):dateLabel(event.date);
+ editingOnline=event.online?event:null;onlineCreateKey=event.id?null:crypto.randomUUID();editing=event.id||null;$('editor-title').textContent=editing?msg("Edit event"):msg("New event");
+ $('editor-sub').textContent=endDateOf(event)!==event.date?dateLabel(event.date)+' – '+dateLabel(endDateOf(event))+msg(" · multi-day event"):dateLabel(event.date);
  $('title').value=event.title||'';document.querySelectorAll('#person-options input').forEach(input=>input.checked=participants(event).includes(input.value));$('person-error').classList.add('hidden');$('date').value=event.date;$('end-date').value=endDateOf(event);$('end-date').min=event.date;lastStart=event.date;
  setTimeInput('time',event.time||'');setTimeInput('end',event.online?event.onlineRecord.editEndTime||'':event.end||'');
  if(event.online)$('end-date').value=event.onlineRecord.editEndDate||endDateOf(event);
@@ -999,7 +1480,7 @@ function insertTimeColon(input,event){
 }
 function updateDateSummary(){
  const start=$('date').value,end=$('end-date').value;
- if(validDate(start)&&validDate(end)&&end>=start)$('editor-sub').textContent=start+(end!==start?' – '+end+msg(' · flerdagarsaktivitet'):'');
+ if(validDate(start)&&validDate(end)&&end>=start)$('editor-sub').textContent=start+(end!==start?' – '+end+msg(" · multi-day event"):'');
 }
 function updateDates(){
  const value=$('date').value;
@@ -1012,18 +1493,18 @@ $('date').addEventListener('change',updateDates);
 $('date').addEventListener('input',()=>{$('date').setCustomValidity('');$('end-date').setCustomValidity('');$('end').setCustomValidity('')});
 $('end-date').addEventListener('input',()=>{$('end-date').setCustomValidity('');$('end').setCustomValidity('');updateDateSummary()});
 $('event-form').addEventListener('submit',async e=>{
- e.preventDefault();if(onlineBusy)return;const title=$('title').value.trim();if(!title){$('title').setCustomValidity(msg('Skriv en aktivitet.'));$('title').reportValidity();return}
- for(const id of ['date','end-date']){if(!validDate($(id).value)){$(id).setCustomValidity(msg('Skriv ett giltigt datum som YYYY-MM-DD.'));$(id).reportValidity();return}}
+ e.preventDefault();if(onlineBusy)return;const title=$('title').value.trim();if(!title){$('title').setCustomValidity(msg("Enter an event."));$('title').reportValidity();return}
+ for(const id of ['date','end-date']){if(!validDate($(id).value)){$(id).setCustomValidity(msg("Enter a valid date as YYYY-MM-DD."));$(id).reportValidity();return}}
  const chosen=selectedPeople();if(!chosen.length){$('person-error').classList.remove('hidden');document.querySelector('#person-options input').focus();return}
- if($('end-date').value<$('date').value){$('end-date').setCustomValidity(msg('Slutdatum får inte vara före startdatum.'));$('end-date').reportValidity();return}
+ if($('end-date').value<$('date').value){$('end-date').setCustomValidity(msg("The end date cannot be before the start date."));$('end-date').reportValidity();return}
  const startTime=canonicalInput('time'),endTime=canonicalInput('end');
- if($('event-source').value==='local'&&$('date').value===$('end-date').value&&startTime&&endTime&&endTime<=startTime){$('end').setCustomValidity(msg('Sluttiden måste vara efter starttiden när aktiviteten slutar samma dag.'));$('end').reportValidity();return}
+ if($('event-source').value==='local'&&$('date').value===$('end-date').value&&startTime&&endTime&&endTime<=startTime){$('end').setCustomValidity(msg("The end time must be after the start time for events ending on the same day."));$('end').reportValidity();return}
  const item={id:editing||('local-'+Date.now()+'-'+Math.random().toString(36).slice(2)),title,date:$('date').value,endDate:$('end-date').value,people:chosen,time:startTime,end:endTime};
  if($('event-source').value!=='local'){
   await saveOnlineEvent(item);return;
  }
  if(editing)events=events.map(e=>e.id===editing?item:e);else events.push(item);
- persist();month=new Date(makeDate(item.date).getFullYear(),makeDate(item.date).getMonth(),1);$('editor').close();render();notify(msg('Aktiviteten är sparad lokalt.'));
+ persist();month=new Date(makeDate(item.date).getFullYear(),makeDate(item.date).getMonth(),1);$('editor').close();render();notify(msg("Event saved locally."));
 });
 $('title').addEventListener('input',()=> $('title').setCustomValidity(''));
 ['time','end'].forEach(id=>{
@@ -1033,7 +1514,7 @@ $('title').addEventListener('input',()=> $('title').setCustomValidity(''));
 $('delete').addEventListener('click',async()=>{
  if(onlineBusy)return;
  if(editingOnline){await deleteOnlineEvent();return}
- events=events.filter(e=>e.id!==editing);persist();$('editor').close();render();notify(msg('Aktiviteten är borttagen.'));
+ events=events.filter(e=>e.id!==editing);persist();$('editor').close();render();notify(msg("Event deleted."));
 });
 $('close').addEventListener('click',()=>{if(!onlineBusy)$('editor').close()});
 $('editor').addEventListener('cancel',e=>{if(onlineBusy)e.preventDefault()});
@@ -1042,10 +1523,10 @@ $('add').addEventListener('click',()=>openCell(month.getFullYear()===now.getFull
 $('prev').addEventListener('click',()=>{month.setMonth(month.getMonth()-1);render()});
 $('next').addEventListener('click',()=>{month.setMonth(month.getMonth()+1);render()});
 $('today').addEventListener('click',()=>{month=new Date(now.getFullYear(),now.getMonth(),1);render();if(touch)requestAnimationFrame(()=>document.querySelector('.is-today')?.scrollIntoView({block:'center',behavior:'smooth'}))});
-$('touch').addEventListener('click',()=>{touch=!touch;$('app').classList.toggle('touch',touch);$('touch').setAttribute('aria-pressed',String(touch));if(touch)document.documentElement.style.setProperty('--row','48px');else fit();notify(touch?msg('Större tryckytor. Svep för att se resten av månaden.'):msg('Månadsöversikt. Alla dagar syns samtidigt.'))});
-$('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else notify(msg('Använd webbläsarens helskärmsläge eller lägg till på hemskärmen.'))}catch{notify(msg('Helskärm stöds inte här. Prova webbläsarens helskärmsläge.'))}});
-document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=document.fullscreenElement?msg('Lämna helskärm'):msg('Helskärm');requestAnimationFrame(fit)});
-$('reset').addEventListener('click',()=>{if(!confirm(msg('Töm den lokala kalendern och återställ standardkolumnerna? Onlinehändelser påverkas inte.')))return;people=defaultPeople.map(p=>({...p}));events=seed();renderPersonOptions();persist();month=new Date(now.getFullYear(),now.getMonth(),1);render();notify(msg('Den lokala kalendern är återställd.'))});
+$('touch').addEventListener('click',()=>{touch=!touch;$('app').classList.toggle('touch',touch);$('touch').setAttribute('aria-pressed',String(touch));if(touch)document.documentElement.style.setProperty('--row','48px');else fit();notify(touch?msg("Larger touch targets. Swipe to see the rest of the month."):msg("Month overview. All days are visible at once."))});
+$('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else notify(msg("Use your browser's fullscreen mode or add to the home screen."))}catch{notify(msg("Fullscreen is not supported here. Try your browser's fullscreen mode."))}});
+document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=document.fullscreenElement?msg("Exit fullscreen"):msg("Fullscreen");requestAnimationFrame(fit)});
+$('reset').addEventListener('click',()=>{if(!confirm(msg("Clear the local calendar and reset the default columns? Online events are not affected.")))return;people=defaultPeople.map(p=>({...p}));events=seed();renderPersonOptions();persist();month=new Date(now.getFullYear(),now.getMonth(),1);render();notify(msg("Local calendar reset."))});
 $('days').addEventListener('keydown',e=>{
  const directions={ArrowRight:[0,1],ArrowLeft:[0,-1],ArrowDown:[1,0],ArrowUp:[-1,0]};const cell=e.target.closest('.cell');
  if(!directions[e.key]||!cell)return;
@@ -1068,7 +1549,7 @@ function renderColumnList(){
  $('column-list').replaceChildren();
  columnDraft.forEach((p,index)=>{
   const row=document.createElement('div');row.className='column-row';row.dataset.columnId=p.id;row.setAttribute('role','listitem');
-  const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.dataset.columnId=p.id;handle.setAttribute('aria-label','Flytta '+(p.name||msg('kolumnen')));handle.setAttribute('aria-describedby','drag-instructions');handle.title=msg('Dra för att ändra ordning');
+  const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.dataset.columnId=p.id;handle.setAttribute('aria-label','Flytta '+(p.name||msg("column")));handle.setAttribute('aria-describedby','drag-instructions');handle.title=msg("Drag to reorder");
   const grip=document.createElement('span');grip.className='grip-dots';grip.setAttribute('aria-hidden','true');handle.append(grip);
   handle.addEventListener('pointerdown',event=>beginColumnDrag(event,p.id));
   handle.addEventListener('pointermove',updateColumnDrag);
@@ -1080,10 +1561,10 @@ function renderColumnList(){
    if(event.key==='ArrowUp')target=index-1;else if(event.key==='ArrowDown')target=index+1;else if(event.key==='Home')target=0;else if(event.key==='End')target=columnDraft.length-1;else return;
    event.preventDefault();if(target>=0&&target<columnDraft.length)moveColumn(handle.dataset.columnId,target-index);
   });
-  const swatch=document.createElement('button');swatch.type='button';swatch.className='column-swatch';swatch.style.background=p.color;swatch.setAttribute('aria-label',msg('Välj färg för ')+p.name);swatch.title=msg('Byt färg');swatch.addEventListener('click',()=>openColorPicker(p.id));
-  const label=document.createElement('label');label.className='sr-only';label.htmlFor='column-name-'+p.id;label.textContent=msg('Namn på kolumn ')+(index+1);
+  const swatch=document.createElement('button');swatch.type='button';swatch.className='column-swatch';swatch.style.background=p.color;swatch.setAttribute('aria-label',msg("Choose color for ")+p.name);swatch.title=msg("Change color");swatch.addEventListener('click',()=>openColorPicker(p.id));
+  const label=document.createElement('label');label.className='sr-only';label.htmlFor='column-name-'+p.id;label.textContent=msg("Column name ")+(index+1);
   const input=document.createElement('input');input.id=label.htmlFor;input.dataset.columnId=p.id;input.value=p.name;input.maxLength=30;input.autocomplete='off';input.addEventListener('input',()=>$('column-error').classList.add('hidden'));
-  const remove=document.createElement('button');remove.type='button';remove.className='remove-column';remove.textContent='×';remove.setAttribute('aria-label',msg('Ta bort kolumn ')+p.name);remove.disabled=columnDraft.length===1;remove.title=remove.disabled?msg('Minst en kolumn behövs'):msg('Ta bort kolumn');remove.addEventListener('click',()=>prepareColumnRemoval(p.id));
+  const remove=document.createElement('button');remove.type='button';remove.className='remove-column';remove.textContent='×';remove.setAttribute('aria-label',msg("Remove column ")+p.name);remove.disabled=columnDraft.length===1;remove.title=remove.disabled?msg("At least one column is required"):msg("Remove column");remove.addEventListener('click',()=>prepareColumnRemoval(p.id));
   row.append(handle,swatch,label,input,remove);$('column-list').append(row);
  });
 }
@@ -1092,7 +1573,7 @@ function moveColumn(id,delta){
  if(index<0||target<0||target>=columnDraft.length)return;
  const [column]=columnDraft.splice(index,1);columnDraft.splice(target,0,column);renderColumnList();
  document.querySelector('#column-list .drag-handle[data-column-id="'+id+'"]').focus();
- $('column-order-status').textContent=column.name+msg(' flyttad till plats ')+(target+1)+msg(' av ')+columnDraft.length+'.';
+ $('column-order-status').textContent=column.name+msg(" moved to position ")+(target+1)+msg(" of ")+columnDraft.length+'.';
 }
 let columnDrag=null,dragFrame=null;
 function beginColumnDrag(event,id){
@@ -1123,17 +1604,17 @@ function finishColumnDrag(cancelled){
  drag.handle.closest('.column-row').classList.remove('is-dragging');$('column-list').classList.remove('is-dragging');
  if(drag.handle.hasPointerCapture(drag.pointerId))drag.handle.releasePointerCapture(drag.pointerId);
  const index=columnDraft.findIndex(p=>p.id===drag.id);
- $('column-order-status').textContent=cancelled?msg('Flyttningen avbröts.'):columnDraft[index].name+msg(' flyttad till plats ')+(index+1)+msg(' av ')+columnDraft.length+'.';
+ $('column-order-status').textContent=cancelled?msg("Move cancelled."):columnDraft[index].name+msg(" moved to position ")+(index+1)+msg(" of ")+columnDraft.length+'.';
 }
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&columnDrag){event.preventDefault();event.stopPropagation();finishColumnDrag(true)}});
 $('column-editor').addEventListener('close',()=>finishColumnDrag(true));
 let colorColumn=null;
 function openColorPicker(id){
  captureColumnNames();colorColumn=id;const column=columnDraft.find(p=>p.id===id);
- $('color-title').textContent=msg('Färg för ')+(column.name||msg('kolumnen'));$('theme-palette').replaceChildren();
+ $('color-title').textContent=msg("Color for ")+(column.name||msg("column"));$('theme-palette').replaceChildren();
  for(const entry of colorPalette){
   const other=columnDraft.find(p=>p.id!==id&&p.color.toLowerCase()===entry.color),selected=column.color.toLowerCase()===entry.color;
-  const button=document.createElement('button');button.type='button';button.className='theme-color';button.dataset.color=entry.color;button.disabled=!!other;button.setAttribute('aria-pressed',String(selected));button.setAttribute('aria-label',entry.name+(other?msg(' – används av ')+other.name:selected?msg(' – vald'):''));button.title=entry.name+(other?msg(' · används av ')+other.name:'');
+  const button=document.createElement('button');button.type='button';button.className='theme-color';button.dataset.color=entry.color;button.disabled=!!other;button.setAttribute('aria-pressed',String(selected));button.setAttribute('aria-label',entry.name+(other?msg(" – used by ")+other.name:selected?msg(" – selected"):''));button.title=entry.name+(other?msg(" · used by ")+other.name:'');
   const chip=document.createElement('span');chip.className='theme-chip';chip.style.background=entry.color;chip.textContent=selected?'✓':other?'×':'';
   const label=document.createElement('span');label.className='theme-color-name';label.textContent=msg(entry.name);button.append(chip,label);
   button.addEventListener('click',()=>chooseColumnColor(entry.color));$('theme-palette').append(button);
@@ -1149,10 +1630,10 @@ function chooseColumnColor(color){
 function prepareColumnRemoval(id){
  captureColumnNames();if(columnDraft.length<2)return;removingColumn=id;
  const p=columnDraft.find(p=>p.id===id),affected=eventDraft.filter(e=>e.people.includes(id)),own=affected.filter(e=>e.people.length===1);
- $('remove-column-title').textContent=msg('Ta bort ')+(p.name||msg('kolumnen'))+'?';
- $('remove-column-info').textContent=affected.length?affected.length+msg(' aktiviteter är kopplade. Delade aktiviteter behåller sina övriga deltagare.')+(own.length?' '+own.length+msg(' egna aktiviteter flyttas till vald kolumn.'):''):msg('Inga aktiviteter är kopplade till kolumnen.');
+ $('remove-column-title').textContent=msg("Remove ")+(p.name||msg("column"))+'?';
+ $('remove-column-info').textContent=affected.length?affected.length+msg(" events are linked. Shared events keep their other participants.")+(own.length?' '+own.length+msg(" individual events will be moved to the selected column."):''):msg("No events are linked to this column.");
  $('move-column').replaceChildren();
- columnDraft.filter(p=>p.id!==id).forEach(p=>{const option=document.createElement('option');option.value=p.id;option.textContent=p.name||msg('Namnlös kolumn');$('move-column').append(option)});
+ columnDraft.filter(p=>p.id!==id).forEach(p=>{const option=document.createElement('option');option.value=p.id;option.textContent=p.name||msg("Unnamed column");$('move-column').append(option)});
  $('move-column-label').classList.toggle('hidden',own.length===0);
  $('remove-column-panel').classList.remove('hidden');$('remove-column-panel').scrollIntoView({block:'nearest'});
 }
@@ -1171,25 +1652,25 @@ $('confirm-remove-column').addEventListener('click',()=>{
 });
 $('add-column').addEventListener('click',()=>{
  captureColumnNames();const name=$('new-column-name').value.trim();
- if(!name){columnError(msg('Skriv ett namn för den nya kolumnen.'));$('new-column-name').focus();return}
- if(columnDraft.some(p=>p.name.toLocaleLowerCase('sv-SE')===name.toLocaleLowerCase('sv-SE'))){columnError(msg('Namnet används redan. Välj ett annat namn.'));return}
+ if(!name){columnError(msg("Enter a name for the new column."));$('new-column-name').focus();return}
+ if(columnDraft.some(p=>p.name.toLocaleLowerCase('sv-SE')===name.toLocaleLowerCase('sv-SE'))){columnError(msg("This name is already in use. Choose another name."));return}
  const color=uniqueColumnColor(columnDraft);
- if(!color){columnError(msg('Alla 32 temafärger används. En färg behöver bli ledig innan en ny kolumn kan läggas till.'));return}
+ if(!color){columnError(msg("All 32 theme colors are in use. Free up a color before adding a column."));return}
  columnDraft.push({id:'person-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),name,initial:initials(name),color});
  $('new-column-name').value='';$('column-error').classList.add('hidden');renderColumnList();
 });
 $('new-column-name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('add-column').click()}});
 $('save-columns').addEventListener('click',async()=>{
  captureColumnNames();
- if(columnDraft.some(p=>!p.name)){columnError(msg('Alla kolumner behöver ett namn.'));return}
+ if(columnDraft.some(p=>!p.name)){columnError(msg("All columns need a name."));return}
  const names=columnDraft.map(p=>p.name.toLocaleLowerCase('sv-SE'));
- if(new Set(names).size!==names.length){columnError(msg('Kolumnerna behöver ha olika namn.'));return}
- if(new Set(columnDraft.map(p=>p.color.toLowerCase())).size!==columnDraft.length){columnError(msg('Varje kolumn behöver ha en egen färg.'));return}
- if(removingColumn){columnError(msg('Slutför eller avbryt borttagningen först.'));return}
- if($('weather-city').value.trim()!==locationQuery){columnError(msg('Sök efter staden och välj en träff, eller ta bort väderstaden.'));return}
- if($('setting-temperature-source').value==='ha'&&!$('setting-temperature-entity').value){columnError(msg('Välj en utomhusgivare från HA-listan.'));return}
+ if(new Set(names).size!==names.length){columnError(msg("Columns must have different names."));return}
+ if(new Set(columnDraft.map(p=>p.color.toLowerCase())).size!==columnDraft.length){columnError(msg("Each column must have its own color."));return}
+ if(removingColumn){columnError(msg("Complete or cancel the removal first."));return}
+ if($('weather-city').value.trim()!==locationQuery){columnError(msg("Search for the city and select a result, or remove the weather city."));return}
+ if($('setting-temperature-source').value==='ha'&&!$('setting-temperature-entity').value){columnError(msg("Select an outdoor sensor from the HA list."));return}
  const mode=$('setting-calendar-mode').value,calendarId=$('setting-online-calendar').value,tz=$('setting-online-timezone').value.trim();
- if(mode!=='local'&&(!onlineState.available||!onlineState.ready||!hasSelectedCalendarDraft())){columnError(msg('Starta kalenderservern, anslut en kalenderkälla och välj en kalender först.'));return}
+ if(mode!=='local'&&(!onlineState.available||!onlineState.ready||!hasSelectedCalendarDraft())){columnError(msg("Start the calendar server, connect a source and select a calendar first."));return}
  if(onlineState.configured&&calendarId&&(calendarId!==onlineState.calendarId||tz!==onlineState.timezone)){
   $('save-columns').disabled=true;
   try{Object.assign(onlineState,await calendarApi('selection','POST',{calendarId,timezone:tz}));onlineState.records=[];onlineState.monthKey='';onlineState.requestedKey=''}
@@ -1197,7 +1678,7 @@ $('save-columns').addEventListener('click',async()=>{
  }
  if(onlineState.available&&onlineState.sources.length)try{await saveSourceSelections()}catch(error){columnError(error.message);return}
  preferences={language:$('setting-language').value,timeFormat:$('setting-time').value,temperatureUnit:$('setting-unit').value,weatherLocation:locationDraft,temperatureSource:$('setting-temperature-source').value,temperatureEntity:$('setting-temperature-entity').value,calendarMode:mode,onlineFallback:$('setting-online-fallback').value};setLanguage(preferences.language);applyStaticLanguage();applyTimePreferences();
- people=columnDraft.map(p=>{const old=people.find(v=>v.id===p.id),aliases=new Set(Array.isArray(p.aliases)?p.aliases:[]);if(old&&old.name!==p.name)aliases.add(old.name);return {...p,initial:initials(p.name),aliases:[...aliases]}});events=eventDraft;persist();refreshWeather();renderPersonOptions();render();$('column-editor').close();notify(msg('Inställningarna är sparade lokalt.'));
+ people=columnDraft.map(p=>{const old=people.find(v=>v.id===p.id),aliases=new Set(Array.isArray(p.aliases)?p.aliases:[]);if(old&&old.name!==p.name)aliases.add(old.name);return {...p,initial:initials(p.name),aliases:[...aliases]}});events=eventDraft;persist();refreshWeather();renderPersonOptions();render();$('column-editor').close();notify(msg("Settings saved locally."));
 });
 // Calendar and clock pickers use the same ISO dates and 24-hour values as manual input.
 let pickerTarget=null,pickerMonth=new Date(now.getFullYear(),now.getMonth(),1);
@@ -1206,7 +1687,7 @@ for(const [id,count] of [['picker-hour',24],['picker-minute',60]])for(let n=0;n<
 function closePicker(){const target=pickerTarget;$('value-picker').close();if(target)$(target).focus()}
 function openDatePicker(id){
  pickerTarget=id;const value=validDate($(id).value)?makeDate($(id).value):now;pickerMonth=new Date(value.getFullYear(),value.getMonth(),1);
- $('picker-title').textContent=id==='date'?msg('Välj startdatum'):msg('Välj slutdatum');$('date-picker-panel').classList.remove('hidden');$('time-picker-panel').classList.add('hidden');renderDatePicker();$('value-picker').showModal();
+ $('picker-title').textContent=id==='date'?msg("Choose start date"):msg("Choose end date");$('date-picker-panel').classList.remove('hidden');$('time-picker-panel').classList.add('hidden');renderDatePicker();$('value-picker').showModal();
 }
 function renderDatePicker(){
  const year=pickerMonth.getFullYear(),month=pickerMonth.getMonth();$('picker-year').value=year;$('picker-month').value=month;$('picker-days').replaceChildren();
@@ -1218,7 +1699,7 @@ function renderDatePicker(){
   button.disabled=pickerTarget==='end-date'&&validDate($('date').value)&&value<$('date').value;
   button.addEventListener('click',()=>chooseDate(value));$('picker-days').append(button);
  }
- $('picker-date-note').textContent=validDate($(pickerTarget).value)?msg('Valt datum: ')+$(pickerTarget).value:msg('Datum anges som YYYY-MM-DD.');
+ $('picker-date-note').textContent=validDate($(pickerTarget).value)?msg("Selected date: ")+$(pickerTarget).value:msg("Dates use YYYY-MM-DD.");
  $('picker-prev').disabled=year===2000&&month===0;$('picker-next').disabled=year===2100&&month===11;
  $('picker-today').disabled=pickerTarget==='end-date'&&validDate($('date').value)&&todayKey<$('date').value;
 }
@@ -1228,7 +1709,7 @@ function chooseDate(value){
 }
 function openTimePicker(id){
  pickerTarget=id;normalizeTime($(id));const canonical=canonicalInput(id);const match=/^([01][0-9]|2[0-3]):([0-5][0-9])$/.exec(canonical),value=match?canonical:(id==='time'?'08:00':'17:00');
- $('picker-title').textContent=id==='time'?msg('Välj starttid'):msg('Välj sluttid');$('picker-hour').value=value.slice(0,2);$('picker-minute').value=value.slice(3);
+ $('picker-title').textContent=id==='time'?msg("Choose start time"):msg("Choose end time");$('picker-hour').value=value.slice(0,2);$('picker-minute').value=value.slice(3);
  $('date-picker-panel').classList.add('hidden');$('time-picker-panel').classList.remove('hidden');updateClock();$('value-picker').showModal();
 }
 function updateClock(){$('clock-preview').textContent=formatTime($('picker-hour').value+':'+$('picker-minute').value)}
@@ -1273,13 +1754,13 @@ function setTimeInput(id,value){const shown=formatTime(value);$(id).value=shown.
 function applyTimePreferences(){
  const twelve=preferences.timeFormat==='12h';
  for(const id of ['time','end']){
-  if(!$(id+'-period')){const select=document.createElement('select');select.id=id+'-period';select.className='period';select.setAttribute('aria-label',id==='time'?msg('Starttid AM eller PM'):msg('Sluttid AM eller PM'));for(const value of ['AM','PM'])select.add(new Option(value,value));$(id).after(select);select.addEventListener('change',()=>{$('end').setCustomValidity('')})}
+  if(!$(id+'-period')){const select=document.createElement('select');select.id=id+'-period';select.className='period';select.setAttribute('aria-label',id==='time'?msg("Start time AM or PM"):msg("End time AM or PM"));for(const value of ['AM','PM'])select.add(new Option(value,value));$(id).after(select);select.addEventListener('change',()=>{$('end').setCustomValidity('')})}
   $(id+'-period').classList.toggle('hidden',!twelve);
   $(id).pattern=twelve?'(0[1-9]|1[0-2]):[0-5][0-9]':'([01][0-9]|2[0-3]):[0-5][0-9]';
   $(id).placeholder=twelve?'08:00':id==='time'?'08:00':'17:00';
  }
- $('time-help').textContent=twelve?msg('12-timmarsformat. Skriv t.ex. 0530 → 05:30 och välj AM eller PM. Tomma tider = heldag.'):msg('24-timmarsformat. Skriv t.ex. 1730 → 17:30. Tomma tider = heldag.');
- document.querySelector('.time-picker-intro').textContent=twelve?msg('12-timmarsklocka · AM/PM'):msg('24-timmarsklocka');
+ $('time-help').textContent=twelve?msg("12-hour format. Type e.g. 0530 → 05:30 and select AM or PM. Leave times blank for all day."):msg("24-hour format. Type e.g. 1730 → 17:30. Leave times blank for all day.");
+ document.querySelector('.time-picker-intro').textContent=twelve?msg("12-hour clock · AM/PM"):msg("24-hour clock");
  [...$('picker-hour').options].forEach(o=>o.textContent=twelve?formatTime(o.value+':00').replace(':00',''):o.value);
 }
 let locationDraft=null,locationQuery='',cityController=null,weatherController=null,weatherVersion=0;
@@ -1289,7 +1770,7 @@ function prepareSettings(){
  cityController?.abort();locationDraft=preferences.weatherLocation;
  $('setting-time').value=preferences.timeFormat;$('setting-unit').value=preferences.temperatureUnit;
  locationQuery=locationDraft?.name||'';$('weather-city').value=locationQuery;
- $('city-results').replaceChildren();$('city-status').textContent=locationDraft?msg('Vald stad: ')+locationDraft.name:msg('Ingen stad vald.');
+ $('city-results').replaceChildren();$('city-status').textContent=locationDraft?msg("Selected city: ")+locationDraft.name:msg("No city selected.");
  $('backup-status').textContent='';
 }
 async function fetchJson(url,signal){
@@ -1301,24 +1782,24 @@ async function fetchJson(url,signal){
 $('search-city').addEventListener('click',async()=>{
  cityController?.abort();cityController=new AbortController();const controller=cityController;
  const query=$('weather-city').value.trim();$('city-results').replaceChildren();
- if(query.length<2){$('city-status').textContent=msg('Skriv minst två tecken.');return}
- $('city-status').textContent=msg('Söker…');
+ if(query.length<2){$('city-status').textContent=msg("Enter at least two characters.");return}
+ $('city-status').textContent=msg("Searching…");
  try{
   const data=await fetchJson('https://geocoding-api.open-meteo.com/v1/search?'+new URLSearchParams({name:query,count:8,language:preferences.language,format:'json'}),controller.signal);
   if(controller!==cityController||!$('column-editor').open)return;
   const results=(data.results||[]).filter(validLocation);
-  $('city-status').textContent=results.length?msg('Välj rätt stad i listan.'):msg('Inga träffar. Prova stad och land.');
-  for(const city of results){const b=document.createElement('button');b.type='button';b.className='city-result';b.textContent=[city.name,city.admin1,city.country].filter(Boolean).join(', ');b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>{locationDraft={name:b.textContent,latitude:city.latitude,longitude:city.longitude};locationQuery=locationDraft.name;$('weather-city').value=locationQuery;$('city-status').textContent=msg('Vald stad: ')+locationQuery;$('city-results').replaceChildren();$('weather-city').focus()});$('city-results').append(b)}
- }catch{if(controller===cityController&&!controller.signal.aborted)$('city-status').textContent=msg('Kunde inte söka städer. Kontrollera internet och försök igen.')}
+  $('city-status').textContent=results.length?msg("Choose the correct city from the list."):msg("No results. Try a city and country.");
+  for(const city of results){const b=document.createElement('button');b.type='button';b.className='city-result';b.textContent=[city.name,city.admin1,city.country].filter(Boolean).join(', ');b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>{locationDraft={name:b.textContent,latitude:city.latitude,longitude:city.longitude};locationQuery=locationDraft.name;$('weather-city').value=locationQuery;$('city-status').textContent=msg("Selected city: ")+locationQuery;$('city-results').replaceChildren();$('weather-city').focus()});$('city-results').append(b)}
+ }catch{if(controller===cityController&&!controller.signal.aborted)$('city-status').textContent=msg("Could not search for cities. Check your connection and try again.")}
 });
-$('weather-city').addEventListener('input',()=>{cityController?.abort();$('city-results').replaceChildren();$('city-status').textContent=msg('Tryck Sök och välj en träff.')});
+$('weather-city').addEventListener('input',()=>{cityController?.abort();$('city-results').replaceChildren();$('city-status').textContent=msg("Press Search and select a result.")});
 $('weather-city').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('search-city').click()}});
-$('clear-city').addEventListener('click',()=>{cityController?.abort();locationDraft=null;locationQuery='';$('weather-city').value='';$('city-results').replaceChildren();$('city-status').textContent=msg('Ingen stad vald.')});
+$('clear-city').addEventListener('click',()=>{cityController?.abort();locationDraft=null;locationQuery='';$('weather-city').value='';$('city-results').replaceChildren();$('city-status').textContent=msg("No city selected.")});
 $('column-editor').addEventListener('close',()=>cityController?.abort());
 $('weather-content').addEventListener('click',()=>openColumns());
 function weatherDay(timezone){return new Intl.DateTimeFormat('sv-SE',{timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
 function weatherWords(code){
- if(code===0)return ['☀',msg('Klart')];if(code<=3)return ['☁',msg('Växlande molnighet')];if(code<=48)return ['≋',msg('Dimma')];if(code<=57)return ['☂',msg('Duggregn')];if(code<=67)return ['☂',msg('Regn')];if(code<=77)return ['❄',msg('Snö')];if(code<=82)return ['☂',msg('Regnskurar')];if(code<=86)return ['❄',msg('Snöbyar')];return ['ϟ',msg('Åska')];
+ if(code===0)return ['☀',msg("Clear")];if(code<=3)return ['☁',msg("Partly cloudy")];if(code<=48)return ['≋',msg("Fog")];if(code<=57)return ['☂',msg("Drizzle")];if(code<=67)return ['☂',msg("Rain")];if(code<=77)return ['❄',msg("Snow")];if(code<=82)return ['☂',msg("Rain showers")];if(code<=86)return ['❄',msg("Snow showers")];return ['ϟ',msg("Thunderstorm")];
 }
 function weatherCacheKey(location){return 'hemma-weather-'+location.latitude+','+location.longitude}
 
@@ -1348,45 +1829,45 @@ function showWeather(data,location,stale=false){
  lastWeather={data,location,stale};
  const content=$('weather-content');content.replaceChildren();content.classList.add('has-forecast');
  const intro=weatherElement('span','forecast-intro','');
- intro.append(weatherElement('span','weather-kicker',msg('Dagens prognos · ')+location.name.split(',')[0]),weatherElement('strong','forecast-condition',weatherWords(code)[1]),weatherElement('small','forecast-date',day));
+ intro.append(weatherElement('span','weather-kicker',msg("Today's forecast · ")+location.name.split(',')[0]),weatherElement('strong','forecast-condition',weatherWords(code)[1]),weatherElement('small','forecast-date',day));
  const art=weatherElement('span','forecast-art','');art.append(weatherArt(code));
  const range=weatherElement('span','forecast-range','');range.append(weatherElement('strong','forecast-high','↑ '+temperature(high)),weatherElement('span','forecast-low','↓ '+temperature(low)));
  // Keep an accessible compact range alongside the more legible high / low.
  range.append(weatherElement('span','sr-only',Math.round(preferences.temperatureUnit==='fahrenheit'?low*9/5+32:low)+'–'+Math.round(preferences.temperatureUnit==='fahrenheit'?high*9/5+32:high)+' '+(preferences.temperatureUnit==='fahrenheit'?'°F':'°C')));
  const details=weatherElement('span','forecast-details','');
- if(Number.isFinite(rain))details.append(weatherElement('span','',msg('Nederbördsrisk ')+rain+' %'));
- const wind=data.daily.wind_speed_10m_max?.[i];if(Number.isFinite(wind))details.append(weatherElement('span','',msg('Vind upp till ')+Math.round(wind)+' m/s'));
+ if(Number.isFinite(rain))details.append(weatherElement('span','',msg("Chance of rain ")+rain+' %'));
+ const wind=data.daily.wind_speed_10m_max?.[i];if(Number.isFinite(wind))details.append(weatherElement('span','',msg("Wind up to ")+Math.round(wind)+' m/s'));
  const sunshine=data.daily.sunrise?.[i],sunset=data.daily.sunset?.[i];if(sunshine&&sunset)details.append(weatherElement('span','sun-hours','↑ '+formatTime(sunshine.slice(11,16))+' · ↓ '+formatTime(sunset.slice(11,16))));
- details.append(weatherElement('small','forecast-attribution',stale?msg('Sparad prognos · Open-Meteo'):'Open-Meteo'));
- if(stale)details.append(weatherElement('span','sr-only',msg('Sparad prognos, kan inte uppdatera')));
+ details.append(weatherElement('small','forecast-attribution',stale?msg("Saved forecast · Open-Meteo"):'Open-Meteo'));
+ if(stale)details.append(weatherElement('span','sr-only',msg("Saved forecast, unable to refresh")));
  content.append(intro,art,range,details);content.title=location.name+' · '+day+' · '+weatherWords(code)[1]+' · '+temperature(low)+'–'+temperature(high)+' · '+details.textContent;
  renderOutdoor();
 }
 function renderOutdoor(){
  const content=$('outdoor-content');content.replaceChildren();
- content.append(weatherElement('span','weather-kicker',msg('Utomhus just nu')));
+ content.append(weatherElement('span','weather-kicker',msg("Outside right now")));
  let value='—',source='',status='';
  if(preferences.temperatureSource==='ha'){
   const sensor=haSensors.find(s=>s.id===preferences.temperatureEntity),connected=haConnected&&Date.now()-haLastReceived<90000;
-  if(!connected)source=msg('HA-givare · ingen anslutning');
-  else if(!sensor)source=msg('HA-givaren saknas');
-  else if(!sensor.state?.trim()||!Number.isFinite(Number(sensor.state)))source=sensor.name+msg(' · ej tillgänglig');
-  else{value=temperature(Number(sensor.state),sensor.unit,1);source=sensor.name;status=msg('HA-givare · ')+(sensor.updated?new Date(sensor.updated).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit',hour12:preferences.timeFormat==='12h'}):'')}
+  if(!connected)source=msg("HA sensor · no connection");
+  else if(!sensor)source=msg("HA sensor not found");
+  else if(!sensor.state?.trim()||!Number.isFinite(Number(sensor.state)))source=sensor.name+msg(" · unavailable");
+  else{value=temperature(Number(sensor.state),sensor.unit,1);source=sensor.name;status=msg("HA sensor · ")+(sensor.updated?new Date(sensor.updated).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit',hour12:preferences.timeFormat==='12h'}):'')}
  }else{
   const data=lastWeather?.data,current=data?.current;
   // Modelled current conditions are useful standalone but are never labelled as a measured sensor value.
-  if(current&&Number.isFinite(current.temperature_2m)&&current.time?.slice(0,10)===weatherDay(data.timezone)&&!lastWeather.stale){value=temperature(current.temperature_2m,'°C',1);source=msg('Vädertjänsten · modellvärde');status=msg('Uppdaterat ')+formatTime(current.time.slice(11,16))}
-  else source=preferences.weatherLocation?msg('Aktuell temperatur saknas'):msg('Välj väderstad i Inställningar');
+  if(current&&Number.isFinite(current.temperature_2m)&&current.time?.slice(0,10)===weatherDay(data.timezone)&&!lastWeather.stale){value=temperature(current.temperature_2m,'°C',1);source=msg("Weather service · model value");status=msg("Updated ")+formatTime(current.time.slice(11,16))}
+  else source=preferences.weatherLocation?msg("Current temperature unavailable"):msg("Choose a weather city in Settings");
  }
  content.append(weatherElement('strong','outdoor-value',value),weatherElement('small','outdoor-source',source),weatherElement('small','outdoor-time',status));
 }
 function renderSensorOptions(selected=$('setting-temperature-entity').value){
- const select=$('setting-temperature-entity');select.replaceChildren(new Option(msg('Välj utomhusgivare'),''));
+ const select=$('setting-temperature-entity');select.replaceChildren(new Option(msg("Select outdoor sensor"),''));
  for(const sensor of haSensors)select.add(new Option(sensor.name+' · '+sensor.id,sensor.id));
- if(selected&&!haSensors.some(s=>s.id===selected))select.add(new Option(selected+msg(' (ej ansluten)'),selected));
+ if(selected&&!haSensors.some(s=>s.id===selected))select.add(new Option(selected+msg(" (not connected)"),selected));
  select.value=selected;
  select.disabled=$('setting-temperature-source').value!=='ha';
- $('ha-temperature-status').textContent=haConnected?msg('HA anslutet. Välj den givare som sitter utomhus.'):msg('Ingen HA-anslutning. Givarlistan blir tillgänglig via det medföljande HA-kortet.');
+ $('ha-temperature-status').textContent=haConnected?msg("HA connected. Choose the sensor located outside."):msg("No HA connection. The sensor list is available through the included HA card.");
 }
 $('setting-temperature-source').addEventListener('change',()=>renderSensorOptions());
 $('outdoor-content').addEventListener('click',()=>openColumns());
@@ -1405,39 +1886,39 @@ async function refreshWeather(){
  const version=++weatherVersion;weatherController?.abort();weatherController=new AbortController();
  lastWeather=null;renderOutdoor();
  const location=preferences.weatherLocation,content=$('weather-content');
- if(!location){content.classList.remove('has-forecast');content.textContent=msg('☀ Välj väderstad i Inställningar');content.removeAttribute('title');return}
+ if(!location){content.classList.remove('has-forecast');content.textContent=msg("☀ Choose a weather city in Settings");content.removeAttribute('title');return}
  let cached=null;
  try{cached=JSON.parse(localStorage.getItem(weatherCacheKey(location))||'null');if(cached)showWeather(cached,location,true)}catch{cached=null}
- if(!cached)content.textContent=msg('Hämtar dagens väder för ')+location.name.split(',')[0]+'…';
+ if(!cached)content.textContent=msg("Fetching today's weather for ")+location.name.split(',')[0]+'…';
  try{
   const data=await fetchJson('https://api.open-meteo.com/v1/forecast?'+new URLSearchParams({latitude:location.latitude,longitude:location.longitude,daily:'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,sunrise,sunset',timezone:'auto',forecast_days:1,current:'temperature_2m',wind_speed_unit:'ms',temperature_unit:'celsius'}),weatherController.signal);
   if(version!==weatherVersion)return;data.fetchedAt=Date.now();showWeather(data,location);
   try{localStorage.setItem(weatherCacheKey(location),JSON.stringify(data))}catch{}
  }catch{
   if(version!==weatherVersion)return;
-  try{if(!cached)throw new Error();showWeather(cached,location,true)}catch{lastWeather=null;renderOutdoor();content.classList.remove('has-forecast');content.textContent=msg('Väder ej tillgängligt · ')+location.name.split(',')[0]+msg(' · Försök via Inställningar');}
+  try{if(!cached)throw new Error();showWeather(cached,location,true)}catch{lastWeather=null;renderOutdoor();content.classList.remove('has-forecast');content.textContent=msg("Weather unavailable · ")+location.name.split(',')[0]+msg(" · Try Settings");}
  }
 }
 $('export-data').addEventListener('click',()=>{
- const blob=new Blob([JSON.stringify({version:2,people,events,appearance,preferences},null,2)],{type:'application/json'});
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='familjekalender-'+key(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
- $('backup-status').textContent=msg('Säkerhetskopian laddas ned. Osparade inställningar ingår inte.');
+ const blob=new Blob([JSON.stringify({version:3,people,events,appearance,preferences},null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='family-planner-'+key(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ $('backup-status').textContent=msg("The backup is downloading. Unsaved settings are not included.");
 });
 function validateBackup(data){
- if(data?.version!==2||!Array.isArray(data.people)||!data.people.length||data.people.length>32||!Array.isArray(data.events))throw new Error();
+ if(![2,3].includes(data?.version)||!Array.isArray(data.people)||!data.people.length||data.people.length>32||!Array.isArray(data.events))throw new Error();
  const ids=new Set(),names=new Set();
  for(const p of data.people){if(!p||typeof p.id!=='string'||!/^[a-zA-Z0-9_-]+$/.test(p.id)||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>30||names.has(p.name.toLowerCase())||!/^#[a-fA-F0-9]{6}$/.test(p.color))throw new Error();ids.add(p.id);names.add(p.name.toLowerCase())}
  const eventIds=new Set(),time=v=>!v||typeof v==='string'&&/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(v);
  for(const e of data.events){if(!e||typeof e.id!=='string'||eventIds.has(e.id)||typeof e.title!=='string'||!e.title.trim()||e.title.length>80||!validDate(e.date)||!validDate(e.endDate)||e.endDate<e.date||!Array.isArray(e.people)||!e.people.length||e.people.some(id=>!ids.has(id))||!time(e.time)||!time(e.end)||e.date===e.endDate&&e.time&&e.end&&e.end<=e.time)throw new Error();eventIds.add(e.id)}
- return {version:2,people:distinctColumnColors(data.people.map(p=>({...p,initial:initials(p.name)}))),events:data.events,preferences:cleanPreferences(data.preferences),appearance:{theme:visualThemes.some(t=>t.id===data.appearance?.theme)?data.appearance.theme:'home',mode:data.appearance?.mode==='dark'?'dark':'light'}};
+ return {version:3,people:distinctColumnColors(data.people.map(p=>({...p,initial:initials(p.name)}))),events:data.events,preferences:cleanPreferences(data.preferences),appearance:{theme:visualThemes.some(t=>t.id===data.appearance?.theme)?data.appearance.theme:'home',mode:data.appearance?.mode==='dark'?'dark':'light'}};
 }
 $('import-data').addEventListener('change',async e=>{
  const file=e.target.files[0];if(!file)return;
  try{
   if(file.size>5000000)throw new Error();const data=validateBackup(JSON.parse(await file.text()));
-  if(!confirm(msg('Ersätt denna webbläsares kalender med säkerhetskopian? Exportera först om du vill behålla den nuvarande.')))return;
+  if(!confirm(msg("Replace this browser's calendar with the backup? Export first to keep the current data.")))return;
   localStorage.setItem(stateKey,JSON.stringify(data));location.reload();
- }catch{$('backup-status').textContent=msg('Kunde inte importera. Välj en giltig säkerhetskopia från familjekalendern (högst 5 MB).')}finally{e.target.value=''}
+ }catch{$('backup-status').textContent=msg("Could not import. Select a valid family-calendar backup (up to 5 MB).")}finally{e.target.value=''}
 });
 
 function onlineFallback(){return people.find(p=>p.id===preferences.onlineFallback)||people.find(p=>p.id==='family')||people[0]}
@@ -1467,10 +1948,10 @@ function calendarEvents(){
 }
 function onlineRange(){return {start:key(month),end:key(new Date(month.getFullYear(),month.getMonth()+1,1)),monthKey:key(month).slice(0,7)}}
 function updateCalendarStatus(){
- if(preferences.calendarMode==='local'){$('storage-note').textContent=msg('Lokal kalender · Sparas bara i denna webbläsare');return}
- const source=onlineState.sources.filter(s=>s.selected.length).map(s=>s.name).join(' · ')||msg('Onlinekalendrar');
- const status=onlineState.loading?msg('Hämtar…'):onlineState.error?msg('Kunde inte uppdatera')+(onlineState.records.length?msg(' · senast hämtade händelser visas'):''):onlineState.updated?msg('Uppdaterad ')+new Date(onlineState.updated).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):msg('Anslut en kalenderkälla i Inställningar');
- $('storage-note').textContent=source+' · '+status+(preferences.calendarMode==='mixed'?msg(' · Även lokala aktiviteter'):'');
+ if(preferences.calendarMode==='local'){$('storage-note').textContent=msg("Local calendar · Saved only in this browser");return}
+ const source=onlineState.sources.filter(s=>s.selected.length).map(s=>s.name).join(' · ')||msg("Online calendars");
+ const status=onlineState.loading?msg("Fetching…"):onlineState.error?msg("Could not refresh")+(onlineState.records.length?msg(" · showing the last fetched events"):''):onlineState.updated?msg('Uppdaterad ')+new Date(onlineState.updated).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):msg("Connect a calendar source in Settings");
+ $('storage-note').textContent=source+' · '+status+(preferences.calendarMode==='mixed'?msg(" · Including local events"):'');
  $('online-sync-status').textContent=onlineState.error||status;
 }
 function queueOnlineRefresh(){
@@ -1479,16 +1960,16 @@ function queueOnlineRefresh(){
  if(onlineState.requestedKey!==requestKey)queueMicrotask(()=>refreshOnline());
 }
 async function calendarApi(path,method='GET',body){
- if(!onlineState.available)throw new Error(msg('Öppna kalendern via den lokala servern för att använda iCloud.'));
+ if(!onlineState.available)throw new Error(msg("Open the calendar through the local server to use online calendars."));
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
  try{
   const response=await fetch(new URL('api/'+path,new URL('.',location.href)),{method,credentials:'same-origin',cache:'no-store',signal:controller.signal,
    headers:method==='GET'?{}:{'Content-Type':'application/json','X-Hemma-CSRF':onlineState.csrf},body:body===undefined?undefined:JSON.stringify(body)});
   const result=await response.json();
-  if(!response.ok)throw new Error(msg(result.error)||msg('Kalenderåtgärden misslyckades.'));
+  if(!response.ok)throw new Error(msg(result.error)||msg("The calendar operation failed."));
   return result;
  }catch(error){
-  if(error.name==='AbortError')throw new Error(msg('Kalendertjänsten svarade inte i tid. Uppdatera innan du försöker spara igen.'));
+  if(error.name==='AbortError')throw new Error(msg("The calendar service timed out. Refresh before trying to save again."));
   throw error;
  }finally{clearTimeout(timer)}
 }
@@ -1500,7 +1981,7 @@ async function refreshOnline(force=false){
  try{
   const data=await calendarApi('v2/events?'+new URLSearchParams({start:range.start,end:range.end}));
   if(request!==onlineRequest)return;
-  if(!Array.isArray(data.events))throw new Error(msg('Kalendertjänsten skickade ett ogiltigt svar.'));
+  if(!Array.isArray(data.events))throw new Error(msg("The calendar service returned an invalid response."));
   const failed=new Set((data.errors||[]).map(e=>e.sourceKey));
   const retained=onlineState.monthKey===range.monthKey?onlineState.records.filter(e=>failed.has(e.sourceKey)).map(e=>({...e,writable:false,canDelete:false,stale:true})):[];
   onlineState.records=[...data.events.filter(e=>typeof e.id==='string'&&typeof e.summary==='string'&&validDate(e.date)&&validDate(e.endDate)),...retained];
@@ -1518,9 +1999,9 @@ async function initOnline(){
 }
 function fillOnlineCalendars(selected){
  const select=$('setting-online-calendar'),value=selected??select.value;
- select.replaceChildren(new Option(msg('Välj kalender'),''));
+ select.replaceChildren(new Option(msg("Choose calendar"),''));
  for(const calendar of onlineState.calendars)select.add(new Option(calendar.name,calendar.id));
- if(onlineState.calendarId&&!onlineState.calendars.some(c=>c.id===onlineState.calendarId))select.add(new Option(onlineState.calendarName||msg('Vald kalender'),onlineState.calendarId));
+ if(onlineState.calendarId&&!onlineState.calendars.some(c=>c.id===onlineState.calendarId))select.add(new Option(onlineState.calendarName||msg("Selected calendar"),onlineState.calendarId));
  select.value=value||onlineState.calendarId;
 }
 function prepareOnlineSettings(){
@@ -1535,7 +2016,7 @@ function prepareOnlineSettings(){
  $('connect-icloud').disabled=!onlineState.available||!onlineState.ready;
  $('disconnect-icloud').disabled=!onlineState.configured;
  $('refresh-online').disabled=!sourceFingerprint();
- $('online-server-status').textContent=!onlineState.available?msg('Onlinekalender kräver den lokala servern. Se ONLINE-CALENDAR.md.'):!onlineState.ready?msg('Starta servern med projektets .venv/bin/python för iCloud-stöd.'):onlineState.configured?msg('Ansluten som: ')+(onlineState.appleId||'iCloud')+' · '+msg('Välj kalender'):msg('Redo att ansluta iCloud.');
+ $('online-server-status').textContent=!onlineState.available?msg("Online calendars require the local server. See ONLINE-CALENDAR.md."):!onlineState.ready?msg("Start the server using the project's .venv/bin/python for calendar support."):onlineState.configured?msg("Connected as: ")+(onlineState.appleId||'iCloud')+' · '+msg("Choose calendar"):msg("Ready to connect iCloud.");
  if(onlineState.configured)loadOnlineCalendars();
  updateCalendarStatus();
 }
@@ -1547,16 +2028,16 @@ async function loadOnlineCalendars(){
 }
 $('setting-calendar-mode').addEventListener('change',()=>{$('icloud-connection-panel').open=$('setting-calendar-mode').value!=='local'});
 $('connect-icloud').addEventListener('click',async()=>{
- const button=$('connect-icloud');button.disabled=true;$('online-server-status').textContent=msg('Ansluter till iCloud…');
+ const button=$('connect-icloud');button.disabled=true;$('online-server-status').textContent=msg("Connecting to iCloud…");
  try{
   const result=await calendarApi('connection','POST',{username:$('icloud-user').value,password:$('icloud-password').value});
   Object.assign(onlineState,result,{records:[],monthKey:'',requestedKey:'',error:'',stale:false});onlineRequest++;
-  await loadSources();fillOnlineCalendars('');$('disconnect-icloud').disabled=false;$('online-server-status').textContent=msg('Ansluten. Välj kalender och spara inställningarna.');
+  await loadSources();fillOnlineCalendars('');$('disconnect-icloud').disabled=false;$('online-server-status').textContent=msg("Connected. Choose a calendar and save settings.");
  }catch(error){$('online-server-status').textContent=msg(error.message)}
  finally{$('icloud-password').value='';button.disabled=false}
 });
 $('disconnect-icloud').addEventListener('click',async()=>{
- if(!confirm(msg('Koppla från iCloud och ta bort serverns sparade Apple-inloggning? Kalendern i iCloud raderas inte.')))return;
+ if(!confirm(msg("Disconnect iCloud and remove the saved Apple credentials from the server? Your iCloud calendar will not be deleted.")))return;
  try{
   Object.assign(onlineState,await calendarApi('connection','DELETE'),{records:[],calendars:[],monthKey:'',requestedKey:'',error:'',updated:null});onlineRequest++;
   await loadSources();prepareOnlineSettings();render();
@@ -1567,7 +2048,7 @@ $('refresh-online').addEventListener('click',()=>{onlineState.requestedKey='';re
 function sourceChoice(sid,cid){return 'online:'+encodeURIComponent(JSON.stringify([sid,cid]))}
 function parseSourceChoice(value){try{return JSON.parse(decodeURIComponent(value.slice(7)))}catch{return []}}
 function fillEventSources(event={}){
- const select=$('event-source');select.replaceChildren(new Option(msg('Lokal kalender'),'local'));
+ const select=$('event-source');select.replaceChildren(new Option(msg("Local calendar"),'local'));
  for(const source of onlineState.sources)for(const calendar of source.calendars){
   if(!source.selected.includes(calendar.id))continue;
   const value=sourceChoice(source.id,calendar.id),option=new Option(source.name+' · '+calendar.name,value);
@@ -1581,17 +2062,17 @@ function fillEventSources(event={}){
 function updateEventSource(){
  const isCloud=$('event-source').value!=='local';
  $('title').maxLength=isCloud?512:80;
- $('event-source-note').textContent=isCloud?(editingOnline?.recurring?msg('Återkommande aktivitet. Ändringar gäller bara detta tillfälle.'):msg('Deltagarnas namn skrivs automatiskt före aktivitetens titel.')):msg('Lokal aktivitet · Sparas bara i denna webbläsare.');
- $('editor-storage-note').textContent=isCloud?msg('Ändringar sparas hos den valda kalenderleverantören.'):msg('Lokala aktiviteter sparas bara i denna webbläsare.');
+ $('event-source-note').textContent=isCloud?(editingOnline?.recurring?msg("Recurring event. Changes apply only to this occurrence."):msg("Participants' names are automatically added before the event title.")):msg("Local event · Saved only in this browser.");
+ $('editor-storage-note').textContent=isCloud?msg("Changes are saved with the selected calendar provider."):msg("Local events are saved only in this browser.");
  const [sid,cid]=parseSourceChoice($('event-source').value),source=onlineState.sources.find(s=>s.id===sid),calendar=source?.calendars.find(c=>c.id===cid);
  $('save-event').disabled=isCloud&&(!calendar||!!editingOnline&&(!editingOnline.writable||!editingOnline.onlineRecord.canUpdate)||!editingOnline&&!calendar.canCreate);
  $('delete').disabled=!!editingOnline&&(!editingOnline.onlineRecord.canDelete||!editingOnline.writable);
- if(editingOnline&&!editingOnline.writable)$('event-source-note').textContent+=' '+msg(editingOnline.onlineRecord.stale?msg('Uppdatera kalendern innan du redigerar.'):msg('Skrivskyddad händelse. Ändra den hos kalenderleverantören.'));
+ if(editingOnline&&!editingOnline.writable)$('event-source-note').textContent+=' '+msg(editingOnline.onlineRecord.stale?msg("Refresh the calendar before editing."):msg("Read-only event. Edit it with the calendar provider."));
 }
 $('event-source').addEventListener('change',updateEventSource);
 function eventOnlineError(message){$('online-event-error').textContent=msg(message);$('online-event-error').classList.remove('hidden')}
 async function saveOnlineEvent(item){
- if(!!item.time!==!!item.end){eventOnlineError(msg('Ange både start- och sluttid, eller lämna båda tomma för heldag.'));return}
+ if(!!item.time!==!!item.end){eventOnlineError(msg("Enter both start and end times, or leave both blank for an all-day event."));return}
  const names=item.people.map(id=>people.find(p=>p.id===id).name);
  const summary=item.people.length===1&&item.people[0]==='family'?item.title:names.join(', ')+' - '+item.title;
  const [sourceId,calendarId]=parseSourceChoice($('event-source').value);
@@ -1602,15 +2083,15 @@ async function saveOnlineEvent(item){
   await calendarApi('v2/events',editingOnline?'PUT':'POST',payload);
   if(preferences.calendarMode==='local'){preferences.calendarMode='mixed';persist()}
   month=new Date(makeDate(item.date).getFullYear(),makeDate(item.date).getMonth(),1);$('editor').close();
-  onlineState.requestedKey='';await refreshOnline(true);notify(msg(onlineState.error?msg('Aktiviteten är sparad, men kalendern kunde inte uppdateras.'):msg('Aktiviteten är sparad i onlinekalendern.')));
+  onlineState.requestedKey='';await refreshOnline(true);notify(msg(onlineState.error?msg("Event saved, but the calendar could not be refreshed."):msg("Event saved to the online calendar.")));
  }catch(error){eventOnlineError(error.message)}
  finally{onlineBusy=false;updateEventSource()}
 }
 async function deleteOnlineEvent(){
  const event=editingOnline;
- if(!event||!event.writable||!event.onlineRecord.canDelete||!confirm(msg(event.recurring?msg('Ta bort bara detta tillfälle? Övriga tillfällen behålls.'):msg('Ta bort aktiviteten från onlinekalendern?'))))return;
+ if(!event||!event.writable||!event.onlineRecord.canDelete||!confirm(msg(event.recurring?msg("Delete only this occurrence? Other occurrences will be kept."):msg("Delete this event from the online calendar?"))))return;
  onlineBusy=true;$('save-event').disabled=true;$('delete').disabled=true;
- try{await calendarApi('v2/events','DELETE',{id:event.onlineRecord.id,etag:event.onlineRecord.etag});$('editor').close();onlineState.requestedKey='';await refreshOnline(true);notify(msg('Aktiviteten är borttagen från onlinekalendern.'))}
+ try{await calendarApi('v2/events','DELETE',{id:event.onlineRecord.id,etag:event.onlineRecord.etag});$('editor').close();onlineState.requestedKey='';await refreshOnline(true);notify(msg("Event deleted from the online calendar."))}
  catch(error){eventOnlineError(error.message)}
  finally{onlineBusy=false;updateEventSource()}
 }
@@ -1626,20 +2107,20 @@ async function loadSources(keepDraft=false){
 }
 function renderSources(){
  const list=$('calendar-sources');list.replaceChildren();
- if(!onlineState.sources.length){const p=document.createElement('p');p.className='notice';p.textContent=msg('Inga kalenderkällor anslutna.');list.append(p)}
+ if(!onlineState.sources.length){const p=document.createElement('p');p.className='notice';p.textContent=msg("No calendar sources connected.");list.append(p)}
  for(const source of onlineState.sources){
   const card=document.createElement('section');card.className='source-card';
   const h=document.createElement('h4');h.textContent=source.name;card.append(h);
-  if(source.account){const account=document.createElement('p');account.className='notice source-account';account.textContent=msg('Ansluten som: ')+source.account;card.append(account)}
+  if(source.account){const account=document.createElement('p');account.className='notice source-account';account.textContent=msg("Connected as: ")+source.account;card.append(account)}
   for(const calendar of source.calendars){
    const label=document.createElement('label'),input=document.createElement('input'),text=document.createElement('span'),cap=document.createElement('span');
    input.type='checkbox';input.checked=(sourcesDraft[source.id]||[]).includes(calendar.id);input.dataset.source=source.id;input.value=calendar.id;
    input.addEventListener('change',()=>{sourcesDraft[source.id]=[...card.querySelectorAll('input:checked')].map(el=>el.value)});
-   text.textContent=calendar.name;cap.className='source-capability';cap.textContent=msg(calendar.canUpdate?msg('Visa och redigera'):calendar.canCreate?msg('Visa och skapa'):msg('Enbart läsning'));text.append(document.createElement('br'),cap);label.append(input,text);card.append(label);
+   text.textContent=calendar.name;cap.className='source-capability';cap.textContent=msg(calendar.canUpdate?msg("View and edit"):calendar.canCreate?msg("View and create"):msg("Read only"));text.append(document.createElement('br'),cap);label.append(input,text);card.append(label);
   }
   if(source.id!=='icloud'){
-   const remove=document.createElement('button');remove.type='button';remove.className='text-button';remove.textContent=msg('Koppla från');
-   remove.addEventListener('click',async()=>{if(!confirm(msg('Koppla från kalenderkällan? Händelser hos leverantören raderas inte.')))return;
+   const remove=document.createElement('button');remove.type='button';remove.className='text-button';remove.textContent=msg("Disconnect");
+   remove.addEventListener('click',async()=>{if(!confirm(msg("Disconnect this calendar source? Events with the provider will not be deleted.")))return;
     try{await calendarApi('v2/sources/'+source.id,'DELETE');await loadSources();onlineState.records=onlineState.records.filter(r=>r.sourceId!==source.id);onlineState.requestedKey='';render()}catch(e){$('source-status').textContent=msg(e.message)}});
    card.append(remove);
   }
@@ -1662,27 +2143,27 @@ function updateSourceFields(){
  $('source-caldav-fields').classList.toggle('hidden',kind!=='caldav');
  $('source-ha-fields').classList.toggle('hidden',kind!=='ha');
  $('source-google-fields').classList.toggle('hidden',kind!=='google');
- $('google-redirect').textContent=msg('Returadress: ')+new URL('api/oauth/google/callback',new URL('.',location.href)).href;
+ $('google-redirect').textContent=msg("Redirect URI: ")+new URL('api/oauth/google/callback',new URL('.',location.href)).href;
  $('connect-source').disabled=!onlineState.available;
 }
 $('source-type').addEventListener('change',updateSourceFields);
 $('reload-sources').addEventListener('click',()=>loadSources(true));
 $('connect-source').addEventListener('click',async()=>{
- const button=$('connect-source');button.disabled=true;$('source-status').textContent=msg('Ansluter…');
+ const button=$('connect-source');button.disabled=true;$('source-status').textContent=msg("Connecting…");
  const type=$('source-type').value;
  try{
   const data=await calendarApi('v2/sources','POST',{type,name:$('source-name').value,url:$('source-url').value,
     username:$('source-user').value,password:$('source-password').value,token:$('source-token').value,
     clientId:$('google-client-id').value,clientSecret:$('google-client-secret').value,timezone:$('source-timezone').value.trim()});
-  if(data.authorizationUrl){$('google-authorize').href=data.authorizationUrl;$('google-authorize').classList.remove('hidden');oauthPending=true;$('source-status').textContent=msg('Fortsätt till Google och godkänn kalenderåtkomst.')}
-  else{await loadSources();$('source-status').textContent=msg('Ansluten. Välj kalendrar och spara inställningarna.')}
+  if(data.authorizationUrl){$('google-authorize').href=data.authorizationUrl;$('google-authorize').classList.remove('hidden');oauthPending=true;$('source-status').textContent=msg("Continue to Google and grant calendar access.")}
+  else{await loadSources();$('source-status').textContent=msg("Connected. Choose calendars and save settings.")}
  }catch(e){$('source-status').textContent=msg(e.message)}
  finally{for(const id of ['source-password','source-token','google-client-secret','source-url'])$(id).value='';button.disabled=false}
 });
 setInterval(async()=>{
  if(!oauthPending||!$('column-editor').open)return;
  const before=onlineState.sources.length;await loadSources(true);
- if(onlineState.sources.length>before){oauthPending=false;$('google-authorize').classList.add('hidden');$('google-authorize').removeAttribute('href');$('source-status').textContent=msg('Google anslutet. Välj kalendrar och spara inställningarna.')}
+ if(onlineState.sources.length>before){oauthPending=false;$('google-authorize').classList.add('hidden');$('google-authorize').removeAttribute('href');$('source-status').textContent=msg("Google connected. Choose calendars and save settings.")}
 },5000);
 initOnline();
 setInterval(()=>refreshOnline(true),3*60*1000);

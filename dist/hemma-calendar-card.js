@@ -11,13 +11,13 @@ class HemmaCalendarCard extends HTMLElement {
   }
   setConfig(config) {
     const url = new URL(config.url || '/local/familjekalender/index.html', location.origin);
-    if (url.origin !== location.origin) throw new Error('Familjekalendern måste ligga på samma adress som HA, exempelvis /local/familjekalender/index.html.');
+    if (url.origin !== location.origin) throw new Error("Family Planner must use the same origin as HA, for example /local/familjekalender/index.html.");
     this.config = {...config, url:url.href};
     if (!this.frame) {
       const style = document.createElement('style');
       style.textContent = ':host{display:block}iframe{display:block;width:100%;height:calc(100dvh - 112px);min-height:610px;border:0;border-radius:12px}';
       this.frame = document.createElement('iframe');
-      this.frame.title = 'Familjekalender';
+      this.frame.title = "Family Planner";
       this.frame.allow = 'fullscreen';
       this.frame.addEventListener('load', () => this.sendTemperatures());
       this.shadowRoot.append(style,this.frame);
@@ -49,5 +49,5 @@ class HemmaCalendarCard extends HTMLElement {
 if (!customElements.get('hemma-calendar-card')) customElements.define('hemma-calendar-card',HemmaCalendarCard);
 window.customCards = window.customCards || [];
 if (!window.customCards.some(card => card.type === 'hemma-calendar-card')) window.customCards.push({
-  type:'hemma-calendar-card',name:'Family Planner',description:'Familjekalender med utomhusgivare från Home Assistant'
+  type:'hemma-calendar-card',name:"Family Planner",description:"Family calendar with outdoor temperature sensors from Home Assistant"
 });

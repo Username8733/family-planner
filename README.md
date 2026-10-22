@@ -1,41 +1,44 @@
 # Family Planner
 
-En familjeplanerare för touchskärm, iPad och dator. Hela månaden visas med en rad per dag och en kolumn per person.
+A touch-friendly family calendar for wall displays, tablets and computers. See the whole month at once: one row per day and one column per person.
 
-En ny installation är tom och har kolumnerna **Gemensamt** och **Person 1–5**. Inga konton, platser eller kalenderhändelser följer med.
+A fresh installation is empty, with **Shared** and **Person 1–5** columns. No accounts, locations or events are included.
 
-## Starta
+## Quick start
+
+Requires Python 3.11 or newer.
 
     python3 -m venv .venv
     .venv/bin/python -m pip install -r requirements.txt
     .venv/bin/python serve.py --port 8086
 
-Öppna http://127.0.0.1:8086/. Enbart lokal kalender kan även öppnas direkt via dist/index.html.
+Open http://127.0.0.1:8086/. Local-only mode also works by opening dist/index.html directly.
+On Windows, use .venv\Scripts\python.exe instead of .venv/bin/python.
 
-## Funktioner
+## Features
 
-- Egna kolumnnamn, färger och dragordning.
-- Aktiviteter bredvid varandra, flerdagarsaktiviteter och flera deltagare.
-- iCloud, Google Calendar, Home Assistant, CalDAV och ICS. Flera källor samtidigt.
-- Svenska och engelska. Datum: YYYY-MM-DD. Tid: 24 timmar eller AM/PM.
-- Svenska helgdagar och flaggdagar.
-- Åtta teman, inklusive e-ink och Liquid Glass, med mörkerläge.
-- Dagens väder, utetemperatur och stöd för HA-givare.
-- Export/import av lokala aktiviteter och inställningar.
+- Rename, color and reorder columns.
+- Side-by-side activities, multi-day events and multiple participants.
+- Connect iCloud, Google Calendar, Home Assistant, CalDAV and ICS feeds. Display multiple sources together.
+- English by default, with optional Swedish. ISO dates (YYYY-MM-DD), 24-hour or AM/PM time.
+- Swedish public holidays, observances and flag days, with localized names.
+- Eight themes with light and dark modes, including e-ink and an Apple-inspired Liquid Glass theme.
+- Today's forecast and outdoor temperature, with optional Home Assistant temperature sensors.
+- Import and export local events and settings.
 
-## Anslutningar och lagring
+## Calendar connections and data
 
-Se [ONLINE-CALENDAR.md](ONLINE-CALENDAR.md) för anslutning, Google OAuth och källornas behörigheter.
+See [ONLINE-CALENDAR.md](ONLINE-CALENDAR.md) for provider setup, Google OAuth and editing capabilities.
 
-Anslutningsuppgifter matas in i Inställningar och sparas enbart i privata filer utanför projektet, normalt under ~/.local/share/hemma-calendar/. De ingår inte i Git eller exporten. Google behöver ett eget OAuth Client ID och Client secret. Inga färdiga kontouppgifter medföljer.
+Enter credentials in Settings. They are stored only in private server-side files outside the repository, normally under ~/.local/share/hemma-calendar/. Credentials are excluded from Git and JSON exports. Google requires your own OAuth client ID and client secret. No working credentials are included.
 
-Lokala aktiviteter och inställningar sparas i webbläsaren. Onlinehändelser hämtas från respektive leverantör. Lokal återställning raderar inga onlinehändelser.
+Local events and preferences are stored in the browser. Online events are fetched from their providers. Resetting the local calendar does not delete online events.
 
 ## Home Assistant
 
-Se [home-assistant/README.md](home-assistant/README.md). Onlinekalendrar kräver Python-servern; lokal kalender kan köras statiskt. Ingen automatisk installation i HA görs.
+See [home-assistant/README.md](home-assistant/README.md). Online calendars require the Python server; local mode can be served as static files. Nothing is installed in Home Assistant automatically.
 
-## Tester
+## Tests
 
     .venv/bin/python -m pip install -r requirements-test.txt
     .venv/bin/python test_online_backend.py
@@ -45,9 +48,10 @@ Se [home-assistant/README.md](home-assistant/README.md). Onlinekalendrar kräver
     .venv/bin/python qa-multiple-calendars.py
     .venv/bin/python qa-settings-layout.py
 
-Webbläsartester använder en separat Brave-profil och syntetiska kalenderdata. Ställ in BRAVE_BINARY om Brave ligger på en annan plats än macOS-standardplatsen.
+Browser checks use a separate temporary Brave profile and synthetic calendar data. Set BRAVE_BINARY when Brave is not installed in its default macOS location.
 
-## Språk och typsnitt
+## Translations and fonts
 
-Översättningar underhålls i i18n.js. Kör python3 sync_i18n.py för att bädda in dem i dist/index.html. Appen kräver inga externa skript.
-Inter-typsnittets licens finns i [licenses/Inter-LICENSE.txt](licenses/Inter-LICENSE.txt).
+English is the source and default language. The optional Swedish catalog is maintained in i18n.js. Run python3 sync_i18n.py after editing it to embed the catalog in dist/index.html. No external scripts are required.
+
+The bundled Inter font is licensed under the SIL Open Font License; see [licenses/Inter-LICENSE.txt](licenses/Inter-LICENSE.txt).

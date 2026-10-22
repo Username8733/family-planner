@@ -32,21 +32,21 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   call('Page.navigate',{'url':(root/'dist/index.html').as_uri()});time.sleep(.1)
   assert ev("key(easterSunday(2024))==='2024-03-31'&&key(easterSunday(2025))==='2025-04-20'&&key(easterSunday(2026))==='2026-04-05'&&key(easterSunday(2008))==='2008-03-23'&&key(easterSunday(2038))==='2038-04-25'")
   for day,name,holiday,flag in [
-   ('2026-12-24','Julafton',False,False),('2026-12-25','Juldagen',True,True),('2026-12-26','Annandag jul',True,False),
-   ('2026-04-03','Långfredagen',True,False),('2026-04-04','Påskafton',False,False),('2026-04-05','Påskdagen',True,True),('2026-04-06','Annandag påsk',True,False),
-   ('2026-05-14','Kristi himmelsfärdsdag',True,False),('2026-05-24','Pingstdagen',True,True),
-   ('2026-06-19','Midsommarafton',False,False),('2026-06-20','Midsommardagen',True,True),('2026-10-31','Alla helgons dag',True,False),
-   ('2026-10-24','FN-dagen',False,True),('2026-12-23','Drottningens födelsedag',False,True),
-   ('2026-09-13','Riksdagsval',False,True),('2010-09-19','Riksdagsval',False,True),('2024-06-09','EU-val',False,True),
-   ('2026-11-29','Första advent',False,False),('2026-12-20','Fjärde advent',False,False)
+   ('2026-12-24','Christmas Eve',False,False),('2026-12-25','Christmas Day',True,True),('2026-12-26','Boxing Day',True,False),
+   ('2026-04-03','Good Friday',True,False),('2026-04-04','Easter Eve',False,False),('2026-04-05','Easter Sunday',True,True),('2026-04-06','Easter Monday',True,False),
+   ('2026-05-14','Ascension Day',True,False),('2026-05-24','Pentecost Sunday',True,True),
+   ('2026-06-19','Midsummer Eve',False,False),('2026-06-20','Midsummer Day',True,True),('2026-10-31',"All Saints' Day",True,False),
+   ('2026-10-24','United Nations Day',False,True),('2026-12-23',"Queen's birthday",False,True),
+   ('2026-09-13','Swedish parliamentary election',False,True),('2010-09-19','Swedish parliamentary election',False,True),('2024-06-09','European Parliament election',False,True),
+   ('2026-11-29','First Sunday of Advent',False,False),('2026-12-20','Fourth Sunday of Advent',False,False)
   ]:
    expected=json.dumps({'day':day,'name':name,'holiday':holiday,'flag':flag})
    assert ev("(()=>{const e="+expected+";const d=swedishCalendar(Number(e.day.slice(0,4))).get(e.day);return !!d&&d.names.includes(e.name)&&d.holiday===e.holiday&&d.flag===e.flag})()"),day
-  assert ev("swedishCalendar(2026).get('2026-04-30').names.includes('Valborgsmässoafton')&&swedishCalendar(2026).get('2026-04-30').names.includes('Kungens födelsedag')")
-  assert ev("swedishCalendar(2008).get('2008-05-01').names.includes('Första maj')&&swedishCalendar(2008).get('2008-05-01').names.includes('Kristi himmelsfärdsdag')")
+  assert ev('swedishCalendar(2026).get(\'2026-04-30\').names.includes("Walpurgis Night")&&swedishCalendar(2026).get(\'2026-04-30\').names.includes("King\'s birthday")')
+  assert ev('swedishCalendar(2008).get(\'2008-05-01\').names.includes("May Day")&&swedishCalendar(2008).get(\'2008-05-01\').names.includes("Ascension Day")')
   assert ev("!swedishCalendar(2004).get('2004-06-06').holiday&&swedishCalendar(2005).get('2005-06-06').holiday&&!swedishCalendar(2017).get('2017-05-29')&&swedishCalendar(2018).get('2018-05-29').flag")
   # Generated dates remain valid and movable feasts remain on the required weekdays.
-  assert ev("""(()=>{for(let year=2000;year<=2100;year++){for(const date of swedishCalendar(year).keys())if(!validDate(date)||!date.startsWith(year+'-'))return false;const e=easterSunday(year);if(e.getDay()!==0||e.getMonth()<2||e.getMonth()>3)return false;const days=[...swedishCalendar(year)].filter(([date,v])=>v.names.includes('Midsommardagen'));if(days.length!==1||makeDate(days[0][0]).getDay()!==6||Number(days[0][0].slice(8))<20||Number(days[0][0].slice(8))>26)return false}return true})()""")
+  assert ev('(()=>{for(let year=2000;year<=2100;year++){for(const date of swedishCalendar(year).keys())if(!validDate(date)||!date.startsWith(year+\'-\'))return false;const e=easterSunday(year);if(e.getDay()!==0||e.getMonth()<2||e.getMonth()>3)return false;const days=[...swedishCalendar(year)].filter(([date,v])=>v.names.includes("Midsummer Day"));if(days.length!==1||makeDate(days[0][0]).getDay()!==6||Number(days[0][0].slice(8))<20||Number(days[0][0].slice(8))>26)return false}return true})()')
   before=ev("JSON.stringify(events)")
   for theme in ['home','sage','ocean','sand','plum','start']:
    for mode in ['light','dark']:
@@ -55,8 +55,8 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
      ev("month=new Date(2026,11,1);appearance={theme:"+json.dumps(theme)+",mode:"+json.dumps(mode)+"};applyAppearance();render()")
      time.sleep(.04)
      assert ev("document.getElementById('calendar').scrollHeight<=document.getElementById('calendar').clientHeight+1"),str((theme,mode,label))
-     assert ev("""(()=>{const c=document.querySelector('.cell[data-date="2026-12-24"]'),th=c.closest('tr').querySelector('th'),name=th.querySelector('.holiday-name');return name.textContent==='Julafton'&&name.scrollWidth<=name.clientWidth+1&&!th.querySelector('.holiday-flag')&&!c.closest('tr').classList.contains('public-holiday')})()"""),str((theme,mode,label,'Christmas Eve'))
-     assert ev("""(()=>{const tr=document.querySelector('.cell[data-date="2026-12-25"]').closest('tr');return tr.classList.contains('public-holiday')&&tr.querySelector('.holiday-flag').getAttribute('aria-label').includes('Juldagen')})()""")
+     assert ev('(()=>{const c=document.querySelector(\'.cell[data-date="2026-12-24"]\'),th=c.closest(\'tr\').querySelector(\'th\'),name=th.querySelector(\'.holiday-name\');return name.textContent==="Christmas Eve"&&name.scrollWidth<=name.clientWidth+1&&!th.querySelector(\'.holiday-flag\')&&!c.closest(\'tr\').classList.contains(\'public-holiday\')})()'),str((theme,mode,label,'Christmas Eve'))
+     assert ev('(()=>{const tr=document.querySelector(\'.cell[data-date="2026-12-25"]\').closest(\'tr\');return tr.classList.contains(\'public-holiday\')&&tr.querySelector(\'.holiday-flag\').getAttribute(\'aria-label\').includes("Christmas Day")})()')
      if theme=='start' and label in ['desktop','ipad-portrait']:
       shot=call('Page.captureScreenshot',{'format':'png','captureBeyondViewport':False});(qa/('holidays-'+mode+'-'+label+'.png')).write_bytes(base64.b64decode(shot['data']))
   assert ev("JSON.stringify(events)")==before,'Observances must not mutate family events'

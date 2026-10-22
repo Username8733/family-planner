@@ -3,11 +3,11 @@
 title: Family Planner
 views:
   - title: Family Planner
-    path: kalender
+    path: calendar
     type: panel
     cards:
       - type: custom:hemma-calendar-card
         url: /local/familjekalender/index.html
         # Optional: restrict which temperature entities the app can choose from.
         # temperature_entities:
-        #   - sensor.ersatt_med_din_utomhusgivare
+        #   - sensor.replace_with_your_outdoor_sensor

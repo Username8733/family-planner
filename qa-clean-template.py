@@ -44,8 +44,13 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   assert ev("events.length===0&&people[1].name==='Person 1'&&document.querySelectorAll('.event').length===0")
   ev("document.getElementById('columns').click();document.getElementById('setting-language').value='en';document.getElementById('save-columns').click()")
   assert ev("preferences.language==='en'&&events.length===0&&document.getElementById('reset').textContent==='Reset calendar'")
+  assert ev("document.documentElement.lang==='en'&&people[0].name==='Shared'&&document.getElementById('columns').textContent==='Settings'")
+  assert ev("(()=>{const data={version:3,people,events,appearance,preferences};return validateBackup(data).version===3&&validateBackup({...data,version:2}).version===3})()")
+  ev("localStorage.setItem(stateKey,JSON.stringify({version:2,people:people.map(p=>p.id==='family'?{...p,name:String.fromCharCode(71,101,109,101,110,115,97,109,116)}:p),events:[{id:'migration-event',title:'Keep this event',date:key(month),endDate:key(month),people:['person-1'],time:'',end:''}],appearance,preferences:{...preferences,language:'sv'}}))")
+  call('Page.reload');time.sleep(.3)
+  assert ev("preferences.language==='en'&&people[0].name==='Shared'&&events.length===1&&events[0].title==='Keep this event'")
   assert not errors,errors
-  print('PASS: empty generic template, removal of legacy activity/location data, no sample events, new data preserved on reload, clean reset and English labels.')
+  print('PASS: empty generic template, removal of legacy activity/location data, no sample events, new data preserved on reload, clean reset, English defaults, backup compatibility and safe locale migration.')
   call('Browser.close');proc.wait(timeout=15)
  finally:
   if proc.poll() is None:proc.terminate();proc.wait(timeout=15)

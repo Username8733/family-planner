@@ -23,18 +23,18 @@ class Fixture(BaseHTTPRequestHandler):
         path=urlsplit(self.path).path;q=parse_qs(urlsplit(self.path).query)
         if path=='/feed.ics':
             if self.failure:return self.send({},500)
-            return self.send(b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:feed-test\r\nDTSTART;VALUE=DATE:20261030\r\nDTEND;VALUE=DATE:20261103\r\nSUMMARY:Person 5 - Lov\r\nRRULE:FREQ=YEARLY;COUNT=2\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n',content='text/calendar')
+            return self.send(b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:feed-test\r\nDTSTART;VALUE=DATE:20261030\r\nDTEND;VALUE=DATE:20261103\r\nSUMMARY:Person 5 - Break\r\nRRULE:FREQ=YEARLY;COUNT=2\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n',content='text/calendar')
         self.check()
-        if path=='/api/calendars':return self.send([{'entity_id':'calendar.hem','name':'HA Hem'}])
+        if path=='/api/calendars':return self.send([{'entity_id':'calendar.hem','name':'HA Home'}])
         if path=='/api/states':return self.send([{'entity_id':'calendar.hem','attributes':{'supported_features':1}}])
-        if path=='/api/calendars/calendar.hem':return self.send([{'summary':'Person 4 - HA Dans','start':{'dateTime':'2026-10-24T12:00:00+02:00'},'end':{'dateTime':'2026-10-24T13:00:00+02:00'}}])
+        if path=='/api/calendars/calendar.hem':return self.send([{'summary':'Person 4 - HA Dance','start':{'dateTime':'2026-10-24T12:00:00+02:00'},'end':{'dateTime':'2026-10-24T13:00:00+02:00'}}])
         if path=='/google/users/me/calendarList':
             if 'pageToken' not in q:return self.send({'items':[{'id':'home@example.invalid','summary':'Google Home','accessRole':'owner'}],'nextPageToken':'second'})
             return self.send({'items':[{'id':'holidays','summary':'Holidays','accessRole':'reader'}]})
         if path=='/google/calendars/home%40example.invalid/events':
             # Google event pagination including recurring occurrence.
             if 'pageToken' not in q:return self.send({'items':list(self.events.values()),'nextPageToken':'last'})
-            return self.send({'items':[{'id':'recurrence-instance','summary':'Person 5, Person 4 - Bio','start':{'date':'2026-10-25'},'end':{'date':'2026-10-26'},'etag':'"r1"','recurringEventId':'series'}]})
+            return self.send({'items':[{'id':'recurrence-instance','summary':'Person 5, Person 4 - Cinema','start':{'date':'2026-10-25'},'end':{'date':'2026-10-26'},'etag':'"r1"','recurringEventId':'series'}]})
         if path.startswith('/google/calendars/home%40example.invalid/events/'):
             return self.send(self.events[path.rsplit('/',1)[1]])
         self.send({},404)
@@ -96,14 +96,14 @@ with tempfile.TemporaryDirectory(prefix='hemma-providers-') as folder:
         assert len(d['events'])==4,len(d['events'])
         google=next(e for e in d['events'] if e['summary']=='Person 5 - Test')
         assert google['date']=='2026-10-24' and google['time']=='12:00' and google['writable']
-        assert next(e for e in d['events'] if e['summary'].endswith('Bio'))['recurring']
+        assert next(e for e in d['events'] if e['summary'].endswith('Cinema'))['recurring']
         feed=next(e for e in d['events'] if e['sourceName']=='Feed')
         assert feed['endDate']=='2026-11-02' and not feed['writable'] and not feed['canDelete']
-        update=dict(item,id=google['id'],etag=google['etag'],summary='Person 5 - Ändrad')
+        update=dict(item,id=google['id'],etag=google['etag'],summary='Person 5 - Updated')
         registry.mutate('PUT',update)
         try:registry.mutate('PUT',update);raise AssertionError('Stale Google ETag accepted')
         except CalendarError as e:assert e.status==409
-        updated=next(e for e in registry.events('2026-10-01','2026-11-01')['events'] if e['summary']=='Person 5 - Ändrad')
+        updated=next(e for e in registry.events('2026-10-01','2026-11-01')['events'] if e['summary']=='Person 5 - Updated')
         registry.mutate('DELETE',{'id':updated['id'],'etag':updated['etag']});assert not Fixture.events
         ha=next(s for s in registry.list()['sources'] if s['type']=='ha')
         hi=dict(item,sourceId=ha['id'],calendarId='calendar.hem',time='',end='',endDate='2026-10-26',requestId=str(uuid.uuid4()))

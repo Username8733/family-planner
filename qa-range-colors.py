@@ -31,18 +31,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
 
   call('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1000,'deviceScaleFactor':1,'mobile':False})
   call('Page.navigate',{'url':(root/'dist/index.html').as_uri()});time.sleep(.1)
-  ev("""month=new Date(2026,9,1);events=[
-    {id:'tone-a',title:'Höstlovsresa',date:'2026-10-22',endDate:'2026-10-26',people:['family'],time:'',end:''},
-    {id:'tone-b',title:'Besök från familjen',date:'2026-10-23',endDate:'2026-10-25',people:['family'],time:'',end:''},
-    {id:'tone-shared',title:'Gemensamma planer',date:'2026-10-24',endDate:'2026-10-27',people:['person-1','person-2'],time:'',end:''},
-    {id:'single',title:'Enskild aktivitet',date:'2026-10-23',endDate:'2026-10-23',people:['family'],time:'18:00',end:''}
-  ];render();
-  window.qaContrast=el=>{
-   const ctx=document.createElement('canvas').getContext('2d');
-   const rgb=value=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=value;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3)};
-   const lum=c=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
-   const style=getComputedStyle(el),a=lum(rgb(style.color)),b=lum(rgb(style.backgroundColor));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
-  }""")
+  ev('month=new Date(2026,9,1);events=[\n    {id:\'tone-a\',title:"Autumn trip",date:\'2026-10-22\',endDate:\'2026-10-26\',people:[\'family\'],time:\'\',end:\'\'},\n    {id:\'tone-b\',title:"Family visit",date:\'2026-10-23\',endDate:\'2026-10-25\',people:[\'family\'],time:\'\',end:\'\'},\n    {id:\'tone-shared\',title:\'Gemensamma planer\',date:\'2026-10-24\',endDate:\'2026-10-27\',people:[\'person-1\',\'person-2\'],time:\'\',end:\'\'},\n    {id:\'single\',title:\'Enskild aktivitet\',date:\'2026-10-23\',endDate:\'2026-10-23\',people:[\'family\'],time:\'18:00\',end:\'\'}\n  ];render();\n  window.qaContrast=el=>{\n   const ctx=document.createElement(\'canvas\').getContext(\'2d\');\n   const rgb=value=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=value;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data].slice(0,3)};\n   const lum=c=>c.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);\n   const style=getComputedStyle(el),a=lum(rgb(style.color)),b=lum(rgb(style.backgroundColor));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);\n  }')
   for theme in ['home','sage','ocean','sand','plum','start']:
    for mode in ['light','dark']:
     ev("appearance={theme:"+json.dumps(theme)+",mode:"+json.dumps(mode)+"};applyAppearance()")

@@ -27,7 +27,7 @@ def libraries():
         import recurring_ical_events
         return caldav, icalendar, recurring_ical_events
     except ImportError:
-        raise CalendarError('Installera serverns kalenderbibliotek enligt ONLINE-CALENDAR.md.', 503)
+        raise CalendarError('Install the calendar libraries as described in ONLINE-CALENDAR.md.', 503)
 
 def date_value(value):
     return value.dt if hasattr(value, 'dt') else value
@@ -90,7 +90,7 @@ class ICloudCalendar:
         caldav, _, _ = libraries()
         config = config or self.config
         if not config.get('username'):
-            raise CalendarError('Anslut ett iCloud-konto i Inställningar.', 409)
+            raise CalendarError('Connect an iCloud account in Settings.', 409)
         # iCloud discovery can return a calendar on a different shard hostname.
         # Calendar objects must use that discovered base, since caldav rejects
         # joining absolute URLs across hosts. Keep discovery on the entry point.
@@ -113,7 +113,7 @@ class ICloudCalendar:
 
     def connect(self, username, password):
         if not isinstance(username, str) or '@' not in username or not isinstance(password, str) or len(password.strip()) < 12:
-            raise CalendarError('Ange ditt Apple-ID och ett appspecifikt lösenord.')
+            raise CalendarError('Enter your Apple ID and an app-specific password.')
         candidate = {'username':username.strip(), 'password':password.strip(),
                      'timezone':self.config.get('timezone', 'Europe/Stockholm')}
         with self.lock:
@@ -139,20 +139,20 @@ class ICloudCalendar:
         try:
             ZoneInfo(tz_name)
         except (ValueError, KeyError):
-            raise CalendarError('Välj en giltig IANA-tidszon, exempelvis Europe/Stockholm.')
+            raise CalendarError('Choose a valid IANA time zone, for example Europe/Stockholm.')
         with self.lock:
             if not self.calendar_cache:
                 self.calendar_cache = self._discover()
             chosen = self.calendar_cache.get(calendar_id)
             if not chosen:
-                raise CalendarError('Kalendern finns inte i kontots kalenderlista.', 404)
+                raise CalendarError("The calendar is not in the account's calendar list.", 404)
             self._write_config(dict(self.config, calendar_id=calendar_id,
                                     calendar_name=chosen['name'], calendar_url=chosen['url'], timezone=tz_name))
         return self.status()
 
     def _selected(self):
         if not self.config.get('calendar_url'):
-            raise CalendarError('Välj vilken iCloud-kalender som ska användas.', 409)
+            raise CalendarError('Choose which iCloud calendar to use.', 409)
         return self.config['calendar_url']
 
     def _token(self, data):
@@ -173,17 +173,17 @@ class ICloudCalendar:
                 raise ValueError()
             return data
         except (ValueError, KeyError, TypeError):
-            raise CalendarError('Händelsereferensen är inte giltig för den valda kalendern.', 400)
+            raise CalendarError('The event reference is not valid for the selected calendar.', 400)
 
     def _fetch(self, client, url):
         _, icalendar, _ = libraries()
         response = client.request(url, method='GET')
         if response.status == 404:
-            raise CalendarError('Händelsen har tagits bort i iCloud. Uppdatera kalendern.', 409)
+            raise CalendarError('The event has been deleted in iCloud. Refresh the calendar.', 409)
         if response.status != 200:
-            raise CalendarError('Kunde inte läsa händelsen från kalendern.', 502)
+            raise CalendarError('Could not read the calendar event.', 502)
         if len(response.raw) > 2_000_000:
-            raise CalendarError('Kalenderhändelsen är för stor.', 422)
+            raise CalendarError('The calendar event is too large.', 422)
         return icalendar.Calendar.from_ical(response.raw), response.headers.get('ETag') or response.headers.get('etag')
 
     def _serialize(self, component, root, url, etag):
@@ -198,7 +198,7 @@ class ICloudCalendar:
         if timed:
             start = start.replace(tzinfo=start.tzinfo or tz).astimezone(tz)
             if not isinstance(end, datetime):
-                raise CalendarError('Händelsen har blandade datum- och tidsvärden.', 422)
+                raise CalendarError('The event mixes date and date-time values.', 422)
             end = end.replace(tzinfo=end.tzinfo or tz).astimezone(tz)
             display_end = end.date() - timedelta(days=1) if end.time().replace(tzinfo=None) == time() and end > start else end.date()
             end_day, end_time = end.date().isoformat(), end.strftime('%H:%M')
@@ -210,7 +210,7 @@ class ICloudCalendar:
             data = {'date':start.isoformat(), 'endDate':last.isoformat(), 'time':'', 'end':'',
                     'editEndDate':last.isoformat(), 'editEndTime':'', 'allDay':True}
         return dict(data, id=self._token({'url':url, 'uid':uid, 'rid':rid, 'calendar':self.config['calendar_id']}),
-                    summary=str(component.get('SUMMARY', '(Utan titel)')),
+                    summary=str(component.get('SUMMARY', '(Untitled)')),
                     etag=etag, recurring=recurring, calendarName=self.config.get('calendar_name', 'iCloud'),
                     writable=bool(etag))
 
@@ -220,7 +220,7 @@ class ICloudCalendar:
             if first.year < 2000 or last.year > 2101 or not 0 < (last-first).days <= 95:
                 raise ValueError()
         except (ValueError, TypeError):
-            raise CalendarError('Ange ett giltigt datumintervall på högst 95 dagar.')
+            raise CalendarError('Enter a valid date range of up to 95 days.')
         with self.lock:
             caldav, _, recurring = libraries()
             tz = ZoneInfo(self.config.get('timezone', 'Europe/Stockholm'))
@@ -242,7 +242,7 @@ class ICloudCalendar:
                             continue
                         output.append(self._serialize(component, original, url, etag))
                         if len(output) > 2500:
-                            raise CalendarError('För många händelser i intervallet. Välj färre kalendrar eller kortare intervall.', 422)
+                            raise CalendarError('Too many events in the range. Select fewer calendars or a shorter range.', 422)
             unique = {event['id']:event for event in output}
             return {'events':list(unique.values()), 'timezone':str(tz), **self.status()}
 
@@ -273,17 +273,17 @@ class ICloudCalendar:
                 start, end = points
             for point in [start, end]:
                 if point.astimezone(timezone.utc).astimezone(tz).replace(tzinfo=None) != point.replace(tzinfo=None):
-                    raise CalendarError('Klockslaget finns inte denna dag på grund av sommartidsbytet. Välj en annan tid.')
+                    raise CalendarError('This time does not exist because of the daylight-saving change. Choose another time.')
             if end.astimezone(timezone.utc) <= start.astimezone(timezone.utc):
                 raise ValueError()
             return start, end
         except (ValueError, KeyError, TypeError):
-            raise CalendarError('Kontrollera datum och tider. Ange både start- och sluttid, eller lämna båda tomma för heldag.')
+            raise CalendarError('Check the dates and times. Enter both start and end times, or leave both blank for all day.')
 
     def _apply(self, component, item):
         summary = item.get('summary', '')
         if not isinstance(summary, str) or not summary.strip() or len(summary) > 512:
-            raise CalendarError('Aktivitetens titel behöver vara 1–512 tecken.')
+            raise CalendarError('The event title must contain 1–512 characters.')
         start, end = self._dates(item, component if component.get("DTSTART") is not None else None)
         if isinstance(start, datetime):
             # UTC serialization unambiguously retains the second autumn hour.
@@ -305,12 +305,12 @@ class ICloudCalendar:
         elif etag:
             headers['If-Match'] = etag
         else:
-            raise CalendarError('Servern saknar versionsinformation. Händelsen ändras inte.', 409)
+            raise CalendarError('The server provides no version information. The event will not be changed.', 409)
         response = client.put(url, root.to_ical(), headers=headers)
         if response.status in (409, 412):
-            raise CalendarError('Händelsen har ändrats i iCloud. Uppdatera och öppna den igen innan du sparar.', 409)
+            raise CalendarError('The event has changed in iCloud. Refresh and reopen it before saving.', 409)
         if response.status not in (200, 201, 204):
-            raise CalendarError('Kalendern tillät inte ändringen. Kontrollera behörigheten till kalendern.', 502)
+            raise CalendarError('The calendar rejected the change. Check its permissions.', 502)
 
     def create(self, item):
         with self.lock:
@@ -319,10 +319,10 @@ class ICloudCalendar:
             try:
                 object_id = str(uuid.UUID(request_id)) if request_id else str(uuid.uuid4())
             except (ValueError, TypeError, AttributeError):
-                raise CalendarError('Ogiltig referens för sparningen.')
+                raise CalendarError('Invalid save reference.')
             uid = object_id+'@hemma-calendar'
             root = icalendar.Calendar()
-            root.add('PRODID', '-//Hem//Familjekalender//SV')
+            root.add('PRODID', '-//Family Planner//Calendar//EN')
             root.add('VERSION', '2.0')
             component = icalendar.Event()
             component.add('UID', uid)
@@ -338,7 +338,7 @@ class ICloudCalendar:
                     old = existing.walk('VEVENT')[0]
                     new = root.walk('VEVENT')[0]
                     if str(old.get('SUMMARY')) != str(new.get('SUMMARY')) or identity(old['DTSTART']) != identity(new['DTSTART']) or identity(old['DTEND']) != identity(new['DTEND']):
-                        raise CalendarError('Sparningen har redan genomförts med andra uppgifter. Uppdatera kalendern innan du försöker igen.',409)
+                        raise CalendarError('This save request was already completed with different data. Refresh the calendar before trying again.',409)
                     return {'ok':True, 'alreadySaved':True}
             return {'ok':True}
 
@@ -346,10 +346,10 @@ class ICloudCalendar:
         reference = self._decode(token)
         root, etag = self._fetch(client, reference['url'])
         if not expected_etag or not etag or not hmac.compare_digest(str(etag), str(expected_etag)):
-            raise CalendarError('Händelsen har ändrats i iCloud. Uppdatera kalendern och öppna den igen.', 409)
+            raise CalendarError('The event has changed in iCloud. Refresh the calendar and reopen it.', 409)
         components = [c for c in root.walk('VEVENT') if str(c.get('UID', '')) == reference['uid']]
         if not components:
-            raise CalendarError('Händelsen finns inte längre.', 409)
+            raise CalendarError('The event no longer exists.', 409)
         return reference, root, etag, components
 
     def update(self, token, expected_etag, item):
@@ -360,7 +360,7 @@ class ICloudCalendar:
                 exact = next((c for c in components if c.get('RECURRENCE-ID') is not None and identity(c['RECURRENCE-ID']) == rid), None)
                 base = exact or next((c for c in components if c.get('RECURRENCE-ID') is None), None)
                 if base is None:
-                    raise CalendarError('Kunde inte hitta det återkommande tillfället.', 409)
+                    raise CalendarError('Could not find the recurring occurrence.', 409)
                 component = copy.deepcopy(base)
                 for name in ['RRULE', 'RDATE', 'EXDATE', 'EXRULE', 'RECURRENCE-ID']:
                     component.pop(name, None)
@@ -399,7 +399,7 @@ class ICloudCalendar:
                     return {'ok':True}
             response = client.request(reference['url'], method='DELETE', headers={'If-Match':etag})
             if response.status in (409, 412):
-                raise CalendarError('Händelsen ändrades samtidigt i iCloud. Uppdatera och försök igen.', 409)
+                raise CalendarError('The event was changed concurrently in iCloud. Refresh and try again.', 409)
             if response.status not in (200, 204):
-                raise CalendarError('Kunde inte ta bort händelsen i kalendern.', 502)
+                raise CalendarError('Could not delete the calendar event.', 502)
             return {'ok':True}

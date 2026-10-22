@@ -30,11 +30,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   call('Page.enable');call('Runtime.enable');call('Network.enable')
 
   call('Page.navigate',{'url':(root/'dist/index.html').as_uri()});time.sleep(.4)
-  ev("""month=new Date(2026,9,1);events=[
-   {id:'ink-single',title:'Tandläkare',date:'2026-10-22',endDate:'2026-10-22',people:['person-1'],time:'09:00',end:'10:00'},
-   {id:'ink-shared',title:'Familjemiddag',date:'2026-10-23',endDate:'2026-10-23',people:['person-1','person-2'],time:'18:00',end:''},
-   {id:'ink-range',title:'Höstlov',date:'2026-10-24',endDate:'2026-10-28',people:['person-5'],time:'',end:''}
-  ];render()""")
+  ev('month=new Date(2026,9,1);events=[\n   {id:\'ink-single\',title:"Dentist",date:\'2026-10-22\',endDate:\'2026-10-22\',people:[\'person-1\'],time:\'09:00\',end:\'10:00\'},\n   {id:\'ink-shared\',title:"Family dinner",date:\'2026-10-23\',endDate:\'2026-10-23\',people:[\'person-1\',\'person-2\'],time:\'18:00\',end:\'\'},\n   {id:\'ink-range\',title:"Autumn break",date:\'2026-10-24\',endDate:\'2026-10-28\',people:[\'person-5\'],time:\'\',end:\'\'}\n  ];render()')
   assert ev("['eink','ios'].every(id=>[...document.getElementById('visual-theme').options].some(o=>o.value===id))")
   for label,w,h in [('desktop',1440,1000),('ipad',768,1024),('ipad-landscape',1024,768)]:
    call('Emulation.setDeviceMetricsOverride',{'width':w,'height':h,'deviceScaleFactor':1,'mobile':False})

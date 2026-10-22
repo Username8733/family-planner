@@ -54,38 +54,38 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             host = urlsplit('//'+self.headers.get('Host','')).hostname
             if host not in self.server.allowed_hosts:
-                self._json({'error':'Ogiltig värdadress.'},403)
+                self._json({'error':'Invalid host address.'},403)
                 return False
             if self.server.basic_auth:
                 expected = 'Basic '+base64.b64encode(':'.join(self.server.basic_auth).encode()).decode()
                 if not hmac.compare_digest(self.headers.get('Authorization',''), expected):
                     self.send_response(401)
-                    self.send_header('WWW-Authenticate','Basic realm="Hem familjekalender", charset="UTF-8"')
+                    self.send_header('WWW-Authenticate','Basic realm="Family Planner", charset="UTF-8"')
                     self.end_headers()
                     return False
             if self.headers.get('Sec-Fetch-Site') == 'cross-site':
-                self._json({'error':'Begäran kommer från en annan webbplats.'},403)
+                self._json({'error':'The request comes from another website.'},403)
                 return False
             if mutate:
                 origin = self.headers.get('Origin')
                 if origin and urlsplit(origin).netloc.lower() != self.headers.get('Host','').lower():
-                    self._json({'error':'Ogiltigt ursprung.'},403)
+                    self._json({'error':'Invalid origin.'},403)
                     return False
                 if not hmac.compare_digest(self.headers.get('X-Hemma-CSRF',''),self.server.csrf):
-                    self._json({'error':'Ladda om sidan och försök igen.'},403)
+                    self._json({'error':'Reload the page and try again.'},403)
                     return False
             return True
         except ValueError:
-            self._json({'error':'Ogiltig begäran.'},400)
+            self._json({'error':'Invalid request.'},400)
             return False
 
     def _body(self):
         size = int(self.headers.get('Content-Length','0'))
         if not 0 < size <= 65536 or self.headers.get_content_type() != 'application/json':
-            raise CalendarError('Skicka en giltig JSON-begäran.',400)
+            raise CalendarError('Send a valid JSON request.',400)
         result = json.loads(self.rfile.read(size))
         if not isinstance(result,dict):
-            raise CalendarError('Ogiltiga uppgifter.')
+            raise CalendarError('Invalid data.')
         return result
 
     def _api(self):
@@ -102,7 +102,7 @@ class Handler(SimpleHTTPRequestHandler):
                     redirect = scheme+'://'+self.headers['Host']+'/api/oauth/google/callback'
                     result = self.server.sources.add(self._body(), redirect)
                 else:
-                    raise CalendarError('API-funktionen finns inte.',404)
+                    raise CalendarError('The API endpoint does not exist.',404)
             elif path.startswith('/api/v2/sources/'):
                 sid = path.rsplit('/',1)[-1]
                 if self.command == 'PUT':
@@ -110,7 +110,7 @@ class Handler(SimpleHTTPRequestHandler):
                 elif self.command == 'DELETE':
                     result = self.server.sources.remove(sid)
                 else:
-                    raise CalendarError('API-funktionen finns inte.',404)
+                    raise CalendarError('The API endpoint does not exist.',404)
             elif path == '/api/v2/events':
                 if self.command == 'GET':
                     query = parse_qs(urlsplit(self.path).query)
@@ -118,7 +118,7 @@ class Handler(SimpleHTTPRequestHandler):
                 elif self.command in ['POST','PUT','DELETE']:
                     result = self.server.sources.mutate(self.command,self._body())
                 else:
-                    raise CalendarError('API-funktionen finns inte.',404)
+                    raise CalendarError('The API endpoint does not exist.',404)
             elif self.command == 'GET' and path == '/api/session':
                 ready = all(importlib.util.find_spec(name) for name in ['caldav','icalendar','recurring_ical_events'])
                 result = {'csrf':self.server.csrf, 'ready':ready, **backend.status()}
@@ -144,18 +144,18 @@ class Handler(SimpleHTTPRequestHandler):
                 else:
                     result = backend.delete(body.get('id',''),body.get('etag',''))
             else:
-                raise CalendarError('API-funktionen finns inte.',404)
+                raise CalendarError('The API endpoint does not exist.',404)
             self._json(result)
         except CalendarError as error:
             self._json({'error':str(error)},error.status)
         except (ValueError,TypeError,KeyError,json.JSONDecodeError):
-            self._json({'error':'Uppgifterna kunde inte tolkas. Kontrollera formuläret.'},400)
+            self._json({'error':'The data could not be parsed. Check the form.'},400)
         except Exception as error:
             # Never return/log upstream exception text: it can include sensitive URLs.
             name = type(error).__name__
-            message = ('iCloud nekade inloggningen. Kontrollera Apple-ID och appspecifikt lösenord.'
+            message = ('iCloud denied login. Check your Apple ID and app-specific password.'
                        if 'Authoriz' in name or 'Authentic' in name
-                       else 'Kalendertjänsten kunde inte nås eller nekade åtgärden. Kontrollera anslutningen och kalenderns behörighet.')
+                       else 'The calendar service could not be reached or denied the operation. Check its connection and permissions.')
             self._json({'error':message},502)
 
     def do_GET(self):
@@ -165,15 +165,15 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 host = urlsplit('//'+self.headers.get('Host','')).hostname
                 if host not in self.server.allowed_hosts:
-                    raise CalendarError('Ogiltig värdadress.',403)
+                    raise CalendarError('Invalid host address.',403)
                 query = parse_qs(urlsplit(self.path).query)
                 self.server.sources.google_callback(query.get('state',[''])[0],query.get('code',[''])[0])
-                message = 'Google anslutet. Stäng fliken och välj kalendrar i Inställningar. / Google connected. Close this tab and choose calendars in Settings.'
+                message = 'Google connected. Close this tab and choose calendars in Settings.'
                 status = 200
             except Exception:
-                message = 'Google kunde inte anslutas. Försök igen från Inställningar. / Google could not be connected. Try again from Settings.'
+                message = 'Google could not be connected. Try again from Settings.'
                 status = 400
-            body = ('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Hemma Calendar</title><body style="font:18px system-ui;padding:32px;max-width:640px"><p>'+message+'</p></body></html>').encode()
+            body = ('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Family Planner</title><body style="font:18px system-ui;padding:32px;max-width:640px"><p>'+message+'</p></body></html>').encode()
             self.send_response(status);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
             return
         if urlsplit(self.path).path.startswith('/api/'):
@@ -197,10 +197,10 @@ class Handler(SimpleHTTPRequestHandler):
         return None
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Hemma familjekalender med iCloud')
+    parser = argparse.ArgumentParser(description='Family Planner with online calendars')
     parser.add_argument('--host',default='127.0.0.1')
     parser.add_argument('--port',type=int,default=8086)
-    parser.add_argument('--public-host',help='Värdnamnet i HTTPS-adressen, utan protokoll eller port.')
+    parser.add_argument('--public-host',help='Hostname in the HTTPS address, without a scheme or port.')
     parser.add_argument('--behind-https-proxy',action='store_true')
     parser.add_argument('--tls-cert')
     parser.add_argument('--tls-key')
@@ -210,9 +210,9 @@ if __name__ == '__main__':
     auth = (username,password) if username and password else None
     if args.host not in ['127.0.0.1','localhost','::1']:
         if not auth or not (args.tls_cert and args.tls_key or args.behind_https_proxy):
-            parser.error('Nätverksåtkomst kräver HEMMA_HTTP_USERNAME/HEMMA_HTTP_PASSWORD och TLS eller --behind-https-proxy. Använd localhost för lokal körning.')
+            parser.error('Network access requires HEMMA_HTTP_USERNAME/HEMMA_HTTP_PASSWORD and TLS or --behind-https-proxy. Use localhost for local access.')
     if args.credentials_file and args.credentials_file.resolve().is_relative_to(Path(__file__).resolve().parent/'dist'):
-        parser.error('Inloggningsfilen måste ligga utanför dist-mappen.')
+        parser.error('The credentials file must be outside the dist directory.')
     backend = ICloudCalendar(args.credentials_file)
     server = CalendarHTTPServer((args.host,args.port),Path(__file__).resolve().parent/'dist',
                                 backend,args.public_host,auth,args.behind_https_proxy)
@@ -222,7 +222,7 @@ if __name__ == '__main__':
         context.load_cert_chain(args.tls_cert,args.tls_key)
         server.socket = context.wrap_socket(server.socket,server_side=True)
         scheme = 'https'
-    print(f'Familjekalender: {scheme}://{args.host}:{server.server_port}/',flush=True)
+    print(f'Family Planner: {scheme}://{args.host}:{server.server_port}/',flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

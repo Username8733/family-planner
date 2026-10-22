@@ -23,9 +23,9 @@ for _ in range(100):
 dav_url=f'http://127.0.0.1:{dav_port}/'
 with caldav.DAVClient(url=dav_url,username='test@example.invalid',password='local-test-password',require_tls=False,enable_rfc6764=False) as client:
  cal=client.get_principal().get_calendars()[0]
- for uid,title,day in [('dans','Person 5 - Dans',24),('bio','Person 5, Person 4 - Bio',24),('unknown','Sven, Person 5 - Besök',25),('no-prefix','Familjemiddag',26),('dash','Person 5 - Hemma - Planering',27)]:
+ for uid,title,day in [('dans','Person 5 - Dance',24),('bio','Person 5, Person 4 - Cinema',24),('unknown','Guest, Person 5 - Visit',25),('no-prefix','Family dinner',26),('dash','Person 5 - Home - Planning',27)]:
   cal.add_event(uid=uid,summary=title,dtstart=date(2026,10,day),dtend=date(2026,10,day+1))
- cal.add_event(uid='range',summary='Person 5, Person 4 - Höstlov',dtstart=date(2026,10,29),dtend=date(2026,11,3))
+ cal.add_event(uid='range',summary='Person 5, Person 4 - Autumn break',dtstart=date(2026,10,29),dtend=date(2026,11,3))
 backend=ICloudCalendar(fixture_root/'private/icloud.json',server_url=dav_url)
 backend.connect('test@example.invalid','local-test-password')
 backend.select(backend.calendars()['calendars'][0]['id'])
@@ -78,7 +78,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   until("!document.getElementById('column-editor').open&&onlineState.records.length===6&&!onlineState.loading")
   assert ev("document.documentElement.lang==='en'&&document.getElementById('columns').textContent==='Settings'&&document.getElementById('month-title').textContent.includes('October')")
   assert ev("JSON.stringify(people.map(({id,name,color})=>({id,name,color})))===qaPeople&&JSON.stringify(events)===qaLocal")
-  assert ev("calendarEvents().find(e=>e.title==='Bio').people.length===2")
+  assert ev("calendarEvents().find(e=>e.title==='Cinema').people.length===2")
   assert ev("document.querySelector('.holiday-name').textContent==='United Nations Day'")
   assert ev("document.querySelector('.date-number').textContent==='2026-10-01'")
   ev("document.getElementById('columns').click()")
@@ -103,13 +103,13 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   # Switch language back through the actual settings save flow.
   ev("document.getElementById('columns').click();document.getElementById('setting-language').value='sv';document.getElementById('save-columns').click()")
   until("!document.getElementById('column-editor').open&&!onlineState.loading")
-  assert ev("document.documentElement.lang==='sv'&&document.getElementById('columns').textContent==='Inställningar'&&document.querySelector('.holiday-name').textContent==='FN-dagen'")
+  assert ev('document.documentElement.lang===\'sv\'&&document.getElementById(\'columns\').textContent===msg("Settings")&&document.querySelector(\'.holiday-name\').textContent===msg("United Nations Day")')
   call('Page.reload');until("onlineState.records.length===7&&!onlineState.loading")
-  assert ev("preferences.language==='sv'&&onlineState.sources.length===2&&people[0].name==='Gemensamt'")
+  assert ev('preferences.language===\'sv\'&&onlineState.sources.length===2&&people[0].name==="Shared"')
   # Partial-source failure retains last records read-only.
   original_read=app_server.sources._read
   def fail_source(sid,s,c,first,last):
-   if s['type']=='caldav':raise CalendarError('Testfel',502)
+   if s['type']=='caldav':raise CalendarError('Test error',502)
    return original_read(sid,s,c,first,last)
   app_server.sources._read=fail_source
   ev("refreshOnline(true)");until("!onlineState.loading&&onlineState.sourceErrors.length===1")

@@ -1,18 +1,23 @@
-# Svenska helgdagar och flaggdagar
+# Swedish public holidays and flag days
 
-Datumkolumnen visar namn på helgdagar och utvalda traditionella dagar, exempelvis julafton, midsommarafton, nyårsafton, Lucia och advent. Allmänna helgdagar, inklusive söndagar, får rött datum. Aftnar räknas inte som allmänna helgdagar. Allmänna flaggdagar markeras med en ritad svensk flagga som fungerar även utan emoji-stöd.
+The date column shows public holidays and selected traditional observances, including Christmas Eve, Midsummer Eve, New Year's Eve, Saint Lucia's Day and Advent. Public holidays, including Sundays, have red dates. Holiday eves are not public holidays. Flag days use an SVG Swedish flag that does not depend on emoji support.
 
-Namn och flaggor tar inte plats bland familjens aktiviteter och sparas inte som redigerbara händelser. På smala skärmar kortas långa namn med ellips; hela namnet och samtliga sammanfallande anledningar finns som titel och tillgänglig text. Julafton visas med sitt namn på den 24 december.
+Observances do not take space in people's activity columns and are not saved as editable events. Long labels are truncated on narrow screens; full names and overlapping observances remain available through tooltips and accessible text. Christmas Eve is shown on December 24.
 
-Påsk, pingst, Kristi himmelsfärdsdag, midsommar, alla helgons dag och advent beräknas lokalt för året som visas. Beräkningen använder lokala kalenderdagar, inte intervall i millisekunder, och fungerar vid sommartidsbyten. Ingen API-nyckel eller internetanslutning behövs.
+Easter, Pentecost, Ascension Day, Midsummer, All Saints' Day and Advent are calculated locally for the displayed year. Calculations use calendar dates rather than millisecond intervals and work across daylight-saving changes. No API key or internet access is required. Names follow the selected interface language; switching to English does not change the country whose holidays are displayed.
 
-Regler kontrollerade 2026-10-21:
-- Helgdagar: https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-1989253-om-allmanna-helgdagar_sfs-1989-253/
-- Flaggdagar: https://data.riksdagen.se/dokument/sfs-1982-270.html
-- Ordinarie riksdagsval: https://www.val.se/val2026
-- Namngivna traditioner: https://www.nordiskamuseet.se/utforska/hogtider/
-- EU-val 2024: https://elections.europa.eu/sv/how-to-vote/se/
+## Rule references
 
-Ordinarie riksdagsval följer nuvarande intervall vart fjärde år, andra söndagen i september (tredje söndagen före 2014). Extra val/omval måste läggas till när datum är beslutade. EU-val kan inte beräknas från ett fast juni-datum; bekräftade datum finns i swedishEuElectionDates. Där är 2024-06-09 infört, då EU-valdagen blev allmän flaggdag från 2024. Nästa EU-val 2029 är ännu inte inlagt med ett gissat datum. Framtida ändringar av regler eller kungliga flaggdagar kräver uppdatering av den lokala kalenderkoden.
+Rules were checked on 2026-10-21:
 
-För äldre datum hanteras nationaldagen som allmän helgdag från 2005, annandag pingst före 2005 och veterandagen som flaggdag från 2018.
+- Public holidays: https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-1989253-om-allmanna-helgdagar_sfs-1989-253/
+- Flag days: https://data.riksdagen.se/dokument/sfs-1982-270.html
+- Regular parliamentary elections: https://www.val.se/val2026
+- Traditional observances: https://www.nordiskamuseet.se/utforska/hogtider/
+- 2024 European Parliament election: https://elections.europa.eu/sv/how-to-vote/se/
+
+Regular parliamentary elections use the current four-year interval and the second Sunday in September (the third Sunday before 2014). Extraordinary elections and re-runs must be added after their dates are confirmed.
+
+European Parliament elections cannot be inferred from a fixed date in June. Confirmed dates are listed in swedishEuElectionDates. The entry for 2024-06-09 reflects the election day becoming a Swedish flag day in 2024. No guessed date is included for 2029. Future legal or royal flag-day changes require a code update.
+
+Historical handling includes Swedish National Day becoming a public holiday in 2005, Whit Monday before 2005 and Swedish Veterans Day as a flag day from 2018.
