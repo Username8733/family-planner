@@ -88,6 +88,10 @@ class Handler(SimpleHTTPRequestHandler):
             raise CalendarError('Invalid data.')
         return result
 
+    def _google_callback_url(self):
+        scheme = 'https' if isinstance(self.connection, ssl.SSLSocket) or self.server.behind_proxy else 'http'
+        return scheme+'://'+self.headers['Host']+'/api/oauth/google/callback'
+
     def _api(self):
         if not self._authorized(self.command != 'GET'):
             return
@@ -98,9 +102,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if self.command == 'GET':
                     result = self.server.sources.list()
                 elif self.command == 'POST':
-                    scheme = 'https' if isinstance(self.connection, ssl.SSLSocket) or self.server.behind_proxy else 'http'
-                    redirect = scheme+'://'+self.headers['Host']+'/api/oauth/google/callback'
-                    result = self.server.sources.add(self._body(), redirect)
+                    result = self.server.sources.add(self._body(), self._google_callback_url())
                 else:
                     raise CalendarError('The API endpoint does not exist.',404)
             elif path.startswith('/api/v2/sources/'):

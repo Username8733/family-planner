@@ -42,7 +42,7 @@ Local events and preferences are stored in the browser. Online events are fetche
 
 ## Home Assistant
 
-See [home-assistant/README.md](home-assistant/README.md). Online calendars require the Python server; local mode can be served as static files. Nothing is installed in Home Assistant automatically.
+See [home-assistant/README.md](home-assistant/README.md). The included HA OS app runs the online calendar service behind HA login and can be shown as its own dashboard. Local mode can also be served as static files. Installation is explicit; nothing is installed automatically.
 
 ## Tests
 
@@ -50,10 +50,12 @@ See [home-assistant/README.md](home-assistant/README.md). Online calendars requi
     .venv/bin/python test_online_backend.py
     .venv/bin/python test_calendar_sources.py
     .venv/bin/python test_ha_websocket.py
+    .venv/bin/python test_ha_ingress.py
     .venv/bin/python qa-clean-template.py
     .venv/bin/python qa-multiple-calendars.py
     .venv/bin/python qa-settings-layout.py
     .venv/bin/python qa-event-entry.py
+    .venv/bin/python qa-ha-adapter.py
 
 Browser checks use a separate temporary Brave profile and synthetic calendar data. Set BRAVE_BINARY when Brave is not installed in its default macOS location.
 

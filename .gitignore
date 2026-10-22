@@ -17,3 +17,4 @@ sources.json
 *.ics
 .DS_Store
 theme-reference.md
+/build/

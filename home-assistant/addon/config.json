@@ -1,0 +1,25 @@
+{
+  "name": "Family Planner",
+  "version": "1.0.1",
+  "slug": "family_planner",
+  "description": "Family calendar with online calendars and a dedicated Home Assistant dashboard.",
+  "arch": [
+    "amd64",
+    "aarch64"
+  ],
+  "startup": "application",
+  "boot": "auto",
+  "init": false,
+  "ingress": true,
+  "ingress_port": 8099,
+  "panel_icon": "mdi:calendar-month",
+  "panel_title": "Family Planner",
+  "panel_admin": false,
+  "backup": "cold",
+  "options": {
+    "dashboard_path": "/dashboard-family-planner/calendar"
+  },
+  "schema": {
+    "dashboard_path": "str"
+  }
+}
