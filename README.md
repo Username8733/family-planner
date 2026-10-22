@@ -4,6 +4,10 @@ A touch-friendly family calendar for wall displays, tablets and computers. See t
 
 A fresh installation is empty, with **Shared** and **Person 1–5** columns. No accounts, locations or events are included.
 
+![Family Planner month view showing fictional events, shared activities and multi-day plans](docs/images/family-planner-example.png)
+
+*Example with fictional events and weather. A fresh installation starts empty.*
+
 ## Quick start
 
 Requires Python 3.11 or newer.
