@@ -83,7 +83,7 @@ Native Microsoft Graph/Exchange OAuth is not included; use ICS or an existing HA
 
 ## Language
 
-English is the default. Choose **Settings → Language → English / Swedish** and save to change it. The choice is local to the current browser and is included in JSON exports.
+English is the default. Choose **Settings → Language → English / Swedish** and save to change it. With the server, the choice is shared across devices and included in JSON exports. A static installation keeps it in the current browser.
 
 Interface labels, months, weekdays, weather descriptions and holiday names are translated. Personal column names, provider calendar names and event titles are not translated. Dates remain YYYY-MM-DD. Time format and temperature units are separate preferences.
 

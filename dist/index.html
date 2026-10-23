@@ -674,12 +674,12 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
    <div class="removal-actions"><button type="button" class="today" id="cancel-remove-column">Cancel</button><button type="button" class="danger-button" id="confirm-remove-column">Remove column</button></div>
   </div>
   <div class="new-column"><label>New column name<input id="new-column-name" maxlength="30" autocomplete="off" placeholder="For example, a person"></label><button type="button" class="today" id="add-column">Add</button></div>
-  </section><section class="settings-section"><h3>Backup and migration</h3><p class="notice">Local events and settings are saved in this browser. Export before moving to HA or another address. Local data does not sync automatically between screens.</p>
-<div class="backup-actions"><button type="button" class="today" id="export-data">Export JSON</button><label class="today import-label">Import JSON<input id="import-data" type="file" accept=".json,application/json"></label></div><p id="backup-status" class="notice" role="status"></p></section>
+  </section><section class="settings-section"><h3>Backup and migration</h3><p class="notice">With the server, settings and local events are shared across devices. Without it, data stays in this browser. Export before moving to another server.</p>
+<div class="backup-actions"><button type="button" class="today" id="export-data">Export JSON</button><button type="button" class="today hidden" id="export-unsynced">Export unsaved changes</button><label class="today import-label">Import JSON<input id="import-data" type="file" accept=".json,application/json"></label></div><p id="backup-status" class="notice" role="status"></p></section>
 <p class="form-error hidden" id="column-error" role="alert"></p>
  </div>
  <div class="settings-footer">
-  <p class="notice">Changes are saved locally when you choose Save settings.</p>
+  <p class="notice">Changes are saved when you choose Save settings.</p>
   <div class="column-actions"><button type="button" class="today" id="cancel-columns">Cancel</button><button type="button" class="add" id="save-columns">Save settings</button></div>
  </div>
 </dialog>
@@ -713,6 +713,23 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
 <script>
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "Unsaved changes were kept in Settings under Export unsaved changes.": "Osparade ändringar finns kvar i Inställningar under Exportera osparade ändringar.",
+  "Reset the shared columns and local events on all devices? Online events are not affected.": "Återställ gemensamma kolumner och lokala aktiviteter på alla enheter? Onlineaktiviteter påverkas inte.",
+  "Shared planner reset.": "Den gemensamma kalendern har återställts.",
+  "Replace the shared planner on all devices with the backup? Export first to keep the current data.": "Ersätt den gemensamma kalendern på alla enheter med säkerhetskopian? Exportera först om du vill behålla nuvarande data.",
+
+  "Shared settings are not available yet. Try again.": "Gemensamma inställningar är inte tillgängliga än. Försök igen.",
+  "The planner changed on another device. Reload before saving your changes.": "Kalendern har ändrats på en annan enhet. Ladda om innan du sparar dina ändringar.",
+  "Settings saved on server.": "Inställningarna har sparats på servern.",
+  "Shared calendar · Saved on server": "Gemensam kalender · Sparas på servern",
+  "Cached events · Updating…": "Cachade aktiviteter · Uppdaterar…",
+  "Local event · Shared through the server.": "Lokal aktivitet · Delas via servern.",
+  "Local events are saved on the server.": "Lokala aktiviteter sparas på servern.",
+  "Event saved on server.": "Aktiviteten har sparats på servern.",
+  "Changes are saved when you choose Save settings.": "Ändringarna sparas när du väljer Spara inställningar.",
+  "With the server, settings and local events are shared across devices. Without it, data stays in this browser. Export before moving to another server.": "Med servern delas inställningar och lokala aktiviteter mellan enheter. Utan server stannar data i den här webbläsaren. Exportera innan du flyttar till en annan server.",
+  "Export unsaved changes": "Exportera osparade ändringar",
+
   "The end defaults to one hour after the start unless you choose another end.": "Sluttiden blir en timme efter starttiden om du inte väljer ett annat slut.",
   "Close day view": "Stäng dagsvyn",
   "Event pages": "Sidor med aktiviteter",
@@ -1286,6 +1303,7 @@ if(savedState&&savedState.version<3){
  preferences.language='en';
  people=people.map(p=>p.id==='family'&&p.name===String.fromCharCode(71,101,109,101,110,115,97,109,116)?{...p,name:'Shared',initial:'SH'}:p);
 }
+touch=!!savedState?.touch;$('app').classList.toggle('touch',touch);$('touch').setAttribute('aria-pressed',String(touch));
 setLanguage(preferences.language);
 people=distinctColumnColors(people);
 function colorRgb(hex){return [1,3,5].map(index=>parseInt(hex.slice(index,index+2),16))}
@@ -1320,7 +1338,66 @@ try{
  const data=savedState?savedState.events:JSON.parse(localStorage.getItem(storageKey)||'null');
  events=Array.isArray(data)?data.filter(e=>e&&typeof e.title==='string'&&validDate(e.date)&&participants(e).length).map(e=>({...e,people:participants(e),endDate:validDate(e.endDate)&&e.endDate>=e.date?e.endDate:e.date})):seed();
 }catch{events=seed();$('storage-note').textContent="Local calendar · Changes kept during this session"}
-function persist(){try{localStorage.setItem(stateKey,JSON.stringify({version:3,people,events,appearance,preferences}))}catch{notify(msg("The change is shown here but could not be saved in the browser."))}}
+const sharedSettings={enabled:false,ready:false,revision:Number.isInteger(savedState?.sharedRevision)?savedState.sharedRevision:0,dirty:false,inFlight:null,conflict:false};
+function plannerSnapshot(){return {version:3,people,events,appearance,preferences,touch}}
+function persistLocal(){
+ try{localStorage.setItem(stateKey,JSON.stringify({...plannerSnapshot(),sharedRevision:sharedSettings.revision,sharedPending:sharedSettings.dirty}))}
+ catch{notify(msg("The change is shown here but could not be saved in the browser."))}
+}
+function persist(){
+ sharedSettings.dirty=true;persistLocal();
+ if(sharedSettings.enabled&&sharedSettings.ready)flushSharedState().catch(error=>notify(error.message));
+}
+async function flushSharedState(){
+ if(!sharedSettings.enabled)return;
+ if(!sharedSettings.ready)throw new Error(msg("Shared settings are not available yet. Try again."));
+ if(sharedSettings.conflict)throw new Error(msg("The planner changed on another device. Reload before saving your changes."));
+ if(sharedSettings.inFlight){await sharedSettings.inFlight;if(sharedSettings.dirty)return flushSharedState();return}
+ const work=(async()=>{
+  while(sharedSettings.dirty){
+   const snapshot=JSON.parse(JSON.stringify(plannerSnapshot()));
+   try{
+    const result=await calendarApi('state','PUT',{revision:sharedSettings.revision,state:snapshot});
+    sharedSettings.revision=result.revision;
+    sharedSettings.dirty=JSON.stringify(snapshot)!==JSON.stringify(plannerSnapshot());persistLocal();
+   }catch(error){if(error.status===409)sharedSettings.conflict=true;throw error}
+  }
+ })();
+ sharedSettings.inFlight=work;
+ try{await work}finally{sharedSettings.inFlight=null}
+}
+function applyPlannerState(value){
+ const data=validateBackup(value);people=data.people;events=data.events;appearance=data.appearance;preferences=data.preferences;touch=!!value.touch;
+ setLanguage(preferences.language);applyStaticLanguage();applyTimePreferences();applyAppearance();renderPersonOptions();
+ $('app').classList.toggle('touch',touch);$('touch').setAttribute('aria-pressed',String(touch));
+ if(touch)document.documentElement.style.setProperty('--row','48px');
+ sharedSettings.dirty=false;persistLocal();render();refreshWeather();
+}
+function hasExistingPlanner(){
+ return !!savedState&&(savedState.events.length||JSON.stringify(savedState.people.map(p=>({id:p.id,name:p.name,color:p.color})))!==JSON.stringify(defaultPeople.map(p=>({id:p.id,name:p.name,color:p.color})))||savedState.appearance?.theme!=='home'||savedState.appearance?.mode!=='light'||JSON.stringify(cleanPreferences(savedState.preferences))!==JSON.stringify(cleanPreferences(null)));
+}
+async function initSharedState(){
+ sharedSettings.enabled=true;
+ const remote=await calendarApi('state');
+ sharedSettings.revision=remote.revision;sharedSettings.ready=true;
+ if(remote.state){
+  if(savedState?.sharedPending&&savedState.sharedRevision===remote.revision){sharedSettings.dirty=true;await flushSharedState()}
+  else{
+   if(savedState?.sharedPending){try{localStorage.setItem('hemma-calendar-unsynced-v1',JSON.stringify(savedState))}catch{}notify(msg('Unsaved changes were kept in Settings under Export unsaved changes.'))}
+   applyPlannerState(remote.state);
+  }
+ }else if(hasExistingPlanner()){sharedSettings.dirty=true;await flushSharedState()}
+}
+async function syncSharedState(){
+ if(!sharedSettings.enabled||!sharedSettings.ready||document.hidden||document.querySelector('dialog[open]')||onlineBusy||sharedSettings.inFlight||sharedSettings.conflict)return;
+ try{
+  if(sharedSettings.dirty){await flushSharedState();return}
+  const remote=await calendarApi('state');
+  if(remote.state&&remote.revision!==sharedSettings.revision){sharedSettings.revision=remote.revision;applyPlannerState(remote.state);await loadSources();refreshOnline(true)}
+ }catch(error){if(sharedSettings.dirty)notify(error.message)}
+}
+setInterval(syncSharedState,15000);
+
 function notify(text){$('toast').textContent=text;$('toast').classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.add('hidden'),3500)}
 function weekNumber(date){const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7)}
 function fit(){
@@ -1628,7 +1705,7 @@ $('event-form').addEventListener('submit',async e=>{
   await saveOnlineEvent(item);return;
  }
  if(editing)events=events.map(e=>e.id===editing?item:e);else events.push(item);
- persist();month=new Date(makeDate(item.date).getFullYear(),makeDate(item.date).getMonth(),1);$('editor').close();render();notify(msg("Event saved locally."));
+ persist();month=new Date(makeDate(item.date).getFullYear(),makeDate(item.date).getMonth(),1);$('editor').close();render();try{await flushSharedState();notify(msg(sharedSettings.enabled?"Event saved on server.":"Event saved locally."))}catch(error){notify(error.message)};
 });
 $('title').addEventListener('input',()=> $('title').setCustomValidity(''));
 ['time','end'].forEach(id=>{
@@ -1647,10 +1724,10 @@ $('add').addEventListener('click',()=>openCell(month.getFullYear()===now.getFull
 $('prev').addEventListener('click',()=>{month.setMonth(month.getMonth()-1);render()});
 $('next').addEventListener('click',()=>{month.setMonth(month.getMonth()+1);render()});
 $('today').addEventListener('click',()=>{month=new Date(now.getFullYear(),now.getMonth(),1);render();if(touch)requestAnimationFrame(()=>document.querySelector('.is-today')?.scrollIntoView({block:'center',behavior:'smooth'}))});
-$('touch').addEventListener('click',()=>{touch=!touch;$('app').classList.toggle('touch',touch);$('touch').setAttribute('aria-pressed',String(touch));if(touch)document.documentElement.style.setProperty('--row','48px');else fit();notify(touch?msg("Larger touch targets. Swipe to see the rest of the month."):msg("Month overview. All days are visible at once."))});
+$('touch').addEventListener('click',()=>{touch=!touch;$('app').classList.toggle('touch',touch);$('touch').setAttribute('aria-pressed',String(touch));if(touch)document.documentElement.style.setProperty('--row','48px');else fit();persist();notify(touch?msg("Larger touch targets. Swipe to see the rest of the month."):msg("Month overview. All days are visible at once."))});
 $('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else notify(msg("Use your browser's fullscreen mode or add to the home screen."))}catch{notify(msg("Fullscreen is not supported here. Try your browser's fullscreen mode."))}});
 document.addEventListener('fullscreenchange',()=>{$('fullscreen').textContent=document.fullscreenElement?msg("Exit fullscreen"):msg("Fullscreen");requestAnimationFrame(fit)});
-$('reset').addEventListener('click',()=>{if(!confirm(msg("Clear the local calendar and reset the default columns? Online events are not affected.")))return;people=defaultPeople.map(p=>({...p}));events=seed();renderPersonOptions();persist();month=new Date(now.getFullYear(),now.getMonth(),1);render();notify(msg("Local calendar reset."))});
+$('reset').addEventListener('click',()=>{if(!confirm(msg(sharedSettings.enabled?"Reset the shared columns and local events on all devices? Online events are not affected.":"Clear the local calendar and reset the default columns? Online events are not affected.")))return;people=defaultPeople.map(p=>({...p}));events=seed();renderPersonOptions();persist();month=new Date(now.getFullYear(),now.getMonth(),1);render();notify(msg(sharedSettings.enabled?"Shared planner reset.":"Local calendar reset."))});
 $('days').addEventListener('keydown',e=>{
  const directions={ArrowRight:[0,1],ArrowLeft:[0,-1],ArrowDown:[1,0],ArrowUp:[-1,0]};const cell=e.target.closest('.cell');
  if(!directions[e.key]||!cell)return;
@@ -1795,6 +1872,10 @@ $('save-columns').addEventListener('click',async()=>{
  if($('setting-temperature-source').value==='ha'&&!$('setting-temperature-entity').value){columnError(msg("Select an outdoor sensor from the HA list."));return}
  const mode=$('setting-calendar-mode').value,calendarId=$('setting-online-calendar').value,tz=$('setting-online-timezone').value.trim();
  if(mode!=='local'&&(!onlineState.available||!onlineState.ready||!hasSelectedCalendarDraft())){columnError(msg("Start the calendar server, connect a source and select a calendar first."));return}
+ if(sharedSettings.enabled){
+  try{await flushSharedState();const current=await calendarApi('state');if(current.revision!==sharedSettings.revision){columnError(msg("The planner changed on another device. Reload before saving your changes."));return}}
+  catch(error){columnError(error.message);return}
+ }
  if(onlineState.configured&&calendarId&&(calendarId!==onlineState.calendarId||tz!==onlineState.timezone)){
   $('save-columns').disabled=true;
   try{Object.assign(onlineState,await calendarApi('selection','POST',{calendarId,timezone:tz}));onlineState.records=[];onlineState.monthKey='';onlineState.requestedKey=''}
@@ -1802,7 +1883,7 @@ $('save-columns').addEventListener('click',async()=>{
  }
  if(onlineState.available&&onlineState.sources.length)try{await saveSourceSelections()}catch(error){columnError(error.message);return}
  preferences={language:$('setting-language').value,timeFormat:$('setting-time').value,temperatureUnit:$('setting-unit').value,weatherLocation:locationDraft,temperatureSource:$('setting-temperature-source').value,temperatureEntity:$('setting-temperature-entity').value,calendarMode:mode,onlineFallback:$('setting-online-fallback').value};setLanguage(preferences.language);applyStaticLanguage();applyTimePreferences();
- people=columnDraft.map(p=>{const old=people.find(v=>v.id===p.id),aliases=new Set(Array.isArray(p.aliases)?p.aliases:[]);if(old&&old.name!==p.name)aliases.add(old.name);return {...p,initial:initials(p.name),aliases:[...aliases]}});events=eventDraft;persist();refreshWeather();renderPersonOptions();render();$('column-editor').close();notify(msg("Settings saved locally."));
+ people=columnDraft.map(p=>{const old=people.find(v=>v.id===p.id),aliases=new Set(Array.isArray(p.aliases)?p.aliases:[]);if(old&&old.name!==p.name)aliases.add(old.name);return {...p,initial:initials(p.name),aliases:[...aliases]}});events=eventDraft;persist();try{await flushSharedState()}catch(error){columnError(error.message);return}refreshWeather();renderPersonOptions();render();$('column-editor').close();notify(msg(sharedSettings.enabled?"Settings saved on server.":"Settings saved locally."));
 });
 // Calendar and clock pickers use the same ISO dates and 24-hour values as manual input.
 let pickerTarget=null,pickerMonth=new Date(now.getFullYear(),now.getMonth(),1);
@@ -1891,6 +1972,7 @@ function applyTimePreferences(){
 let locationDraft=null,locationQuery='',cityController=null,weatherController=null,weatherVersion=0;
 function prepareSettings(){
  prepareOnlineSettings();
+ $('export-unsynced').classList.toggle('hidden',!localStorage.getItem('hemma-calendar-unsynced-v1'));
  $('setting-temperature-source').value=preferences.temperatureSource;renderSensorOptions(preferences.temperatureEntity);
  cityController?.abort();locationDraft=preferences.weatherLocation;
  $('setting-time').value=preferences.timeFormat;$('setting-unit').value=preferences.temperatureUnit;
@@ -2025,9 +2107,13 @@ async function refreshWeather(){
  }
 }
 $('export-data').addEventListener('click',()=>{
- const blob=new Blob([JSON.stringify({version:3,people,events,appearance,preferences},null,2)],{type:'application/json'});
+ const blob=new Blob([JSON.stringify(plannerSnapshot(),null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='family-planner-'+key(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  $('backup-status').textContent=msg("The backup is downloading. Unsaved settings are not included.");
+});
+$('export-unsynced').addEventListener('click',()=>{
+ const raw=localStorage.getItem('hemma-calendar-unsynced-v1');if(!raw)return;
+ const blob=new Blob([raw],{type:'application/json'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='family-planner-unsaved.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 });
 function validateBackup(data){
  if(![2,3].includes(data?.version)||!Array.isArray(data.people)||!data.people.length||data.people.length>32||!Array.isArray(data.events))throw new Error();
@@ -2035,13 +2121,14 @@ function validateBackup(data){
  for(const p of data.people){if(!p||typeof p.id!=='string'||!/^[a-zA-Z0-9_-]+$/.test(p.id)||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>30||names.has(p.name.toLowerCase())||!/^#[a-fA-F0-9]{6}$/.test(p.color))throw new Error();ids.add(p.id);names.add(p.name.toLowerCase())}
  const eventIds=new Set(),time=v=>!v||typeof v==='string'&&/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(v);
  for(const e of data.events){if(!e||typeof e.id!=='string'||eventIds.has(e.id)||typeof e.title!=='string'||!e.title.trim()||e.title.length>80||!validDate(e.date)||!validDate(e.endDate)||e.endDate<e.date||!Array.isArray(e.people)||!e.people.length||e.people.some(id=>!ids.has(id))||!time(e.time)||!time(e.end)||e.date===e.endDate&&e.time&&e.end&&e.end<=e.time)throw new Error();eventIds.add(e.id)}
- return {version:3,people:distinctColumnColors(data.people.map(p=>({...p,initial:initials(p.name)}))),events:data.events,preferences:cleanPreferences(data.preferences),appearance:{theme:visualThemes.some(t=>t.id===data.appearance?.theme)?data.appearance.theme:'home',mode:data.appearance?.mode==='dark'?'dark':'light'}};
+ return {version:3,people:distinctColumnColors(data.people.map(p=>({...p,initial:initials(p.name)}))),events:data.events,preferences:cleanPreferences(data.preferences),appearance:{theme:visualThemes.some(t=>t.id===data.appearance?.theme)?data.appearance.theme:'home',mode:data.appearance?.mode==='dark'?'dark':'light'},touch:!!data.touch};
 }
 $('import-data').addEventListener('change',async e=>{
  const file=e.target.files[0];if(!file)return;
  try{
   if(file.size>5000000)throw new Error();const data=validateBackup(JSON.parse(await file.text()));
   if(!confirm(msg("Replace this browser's calendar with the backup? Export first to keep the current data.")))return;
+  if(sharedSettings.enabled){const result=await calendarApi('state','PUT',{revision:sharedSettings.revision,state:data});sharedSettings.revision=result.revision}
   localStorage.setItem(stateKey,JSON.stringify(data));location.reload();
  }catch{$('backup-status').textContent=msg("Could not import. Select a valid family-calendar backup (up to 5 MB).")}finally{e.target.value=''}
 });
@@ -2073,9 +2160,9 @@ function calendarEvents(){
 }
 function onlineRange(){return {start:key(month),end:key(new Date(month.getFullYear(),month.getMonth()+1,1)),monthKey:key(month).slice(0,7)}}
 function updateCalendarStatus(){
- if(preferences.calendarMode==='local'){$('storage-note').textContent=msg("Local calendar · Saved only in this browser");return}
+ if(preferences.calendarMode==='local'){$('storage-note').textContent=msg(sharedSettings.enabled?"Shared calendar · Saved on server":"Local calendar · Saved only in this browser");return}
  const source=onlineState.sources.filter(s=>s.selected.length).map(s=>s.name).join(' · ')||msg("Online calendars");
- const status=onlineState.loading?msg("Fetching…"):onlineState.error?msg("Could not refresh")+(onlineState.records.length?msg(" · showing the last fetched events"):''):onlineState.updated?msg('Uppdaterad ')+new Date(onlineState.updated).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):msg("Connect a calendar source in Settings");
+ const status=onlineState.loading?msg("Fetching…"):onlineState.refreshing?msg("Cached events · Updating…"):onlineState.error?msg("Could not refresh")+(onlineState.records.length?msg(" · showing the last fetched events"):''):onlineState.updated?msg('Uppdaterad ')+new Date(onlineState.updated).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}):msg("Connect a calendar source in Settings");
  $('storage-note').textContent=source+' · '+status+(preferences.calendarMode==='mixed'?msg(" · Including local events"):'');
  $('online-sync-status').textContent=onlineState.error||status;
 }
@@ -2091,34 +2178,37 @@ async function calendarApi(path,method='GET',body){
   const response=await fetch(new URL('api/'+path,new URL('.',location.href)),{method,credentials:'same-origin',cache:'no-store',signal:controller.signal,
    headers:method==='GET'?{}:{'Content-Type':'application/json','X-Hemma-CSRF':onlineState.csrf},body:body===undefined?undefined:JSON.stringify(body)});
   const result=await response.json();
-  if(!response.ok)throw new Error(msg(result.error)||msg("The calendar operation failed."));
+  if(!response.ok){const error=new Error(msg(result.error)||msg("The calendar operation failed."));error.status=response.status;throw error}
   return result;
  }catch(error){
   if(error.name==='AbortError')throw new Error(msg("The calendar service timed out. Refresh before trying to save again."));
   throw error;
  }finally{clearTimeout(timer)}
 }
-async function refreshOnline(force=false){
+let onlineCachePoll=null;
+async function refreshOnline(force=false,refreshProvider=false){
  if(preferences.calendarMode==='local'||!sourceFingerprint()||!onlineState.available)return;
  const range=onlineRange(),requestKey=range.monthKey+'|'+sourceFingerprint();
  if(!force&&onlineState.requestedKey===requestKey)return;
  const request=++onlineRequest;onlineState.requestedKey=requestKey;onlineState.loading=true;updateCalendarStatus();
  try{
-  const data=await calendarApi('v2/events?'+new URLSearchParams({start:range.start,end:range.end}));
+  clearTimeout(onlineCachePoll);
+  const data=await calendarApi('v2/events?'+new URLSearchParams({start:range.start,end:range.end,...(refreshProvider?{refresh:'1'}:{})}));
   if(request!==onlineRequest)return;
   if(!Array.isArray(data.events))throw new Error(msg("The calendar service returned an invalid response."));
-  const failed=new Set((data.errors||[]).map(e=>e.sourceKey));
-  const retained=onlineState.monthKey===range.monthKey?onlineState.records.filter(e=>failed.has(e.sourceKey)).map(e=>({...e,writable:false,canDelete:false,stale:true})):[];
+  const failed=new Set((data.errors||[]).map(e=>e.sourceKey)),returnedIds=new Set(data.events.map(e=>e.id));
+  const retained=onlineState.monthKey===range.monthKey?onlineState.records.filter(e=>failed.has(e.sourceKey)&&!returnedIds.has(e.id)).map(e=>({...e,writable:false,canDelete:false,stale:true})):[];
   onlineState.records=[...data.events.filter(e=>typeof e.id==='string'&&typeof e.summary==='string'&&validDate(e.date)&&validDate(e.endDate)),...retained];
   onlineState.sourceErrors=data.errors||[];
-  onlineState.monthKey=range.monthKey;onlineState.stale=false;onlineState.error=onlineState.sourceErrors.map(e=>e.name+': '+msg(e.error)).join(' · ');onlineState.updated=Date.now();
+  onlineState.monthKey=range.monthKey;onlineState.stale=!!data.cache?.stale;onlineState.refreshing=!!data.cache?.refreshing;onlineState.error=onlineState.sourceErrors.map(e=>e.name+': '+msg(e.error)).join(' · ');onlineState.updated=data.cache?.fetchedAt?data.cache.fetchedAt*1000:Date.now();
+  if(data.cache?.refreshing)onlineCachePoll=setTimeout(()=>{if(onlineRange().monthKey===range.monthKey)refreshOnline(true)},1500);
  }catch(error){if(request===onlineRequest){onlineState.error=msg(error.message);onlineState.stale=true}}
  finally{if(request===onlineRequest){onlineState.loading=false;render()}}
 }
 async function initOnline(){
  if(!['http:','https:'].includes(location.protocol))return;
  onlineState.available=true;
- try{Object.assign(onlineState,await calendarApi('session'));await loadSources();queueOnlineRefresh()}
+ try{Object.assign(onlineState,await calendarApi('session'));await initSharedState();await loadSources();queueOnlineRefresh()}
  catch{onlineState.available=false}
  if($('column-editor').open)prepareOnlineSettings();updateCalendarStatus();
 }
@@ -2168,7 +2258,7 @@ $('disconnect-icloud').addEventListener('click',async()=>{
   await loadSources();prepareOnlineSettings();render();
  }catch(error){$('online-server-status').textContent=msg(error.message)}
 });
-$('refresh-online').addEventListener('click',()=>{onlineState.requestedKey='';refreshOnline(true)});
+$('refresh-online').addEventListener('click',()=>{onlineState.requestedKey='';refreshOnline(true,true)});
 
 function sourceChoice(sid,cid){return 'online:'+encodeURIComponent(JSON.stringify([sid,cid]))}
 function parseSourceChoice(value){try{return JSON.parse(decodeURIComponent(value.slice(7)))}catch{return []}}
@@ -2187,8 +2277,8 @@ function fillEventSources(event={}){
 function updateEventSource(){
  const isCloud=$('event-source').value!=='local';
  $('title').maxLength=isCloud?512:80;
- $('event-source-note').textContent=isCloud?(editingOnline?.recurring?msg("Recurring event. Changes apply only to this occurrence."):msg("Participants' names are automatically added before the event title.")):msg("Local event · Saved only in this browser.");
- $('editor-storage-note').textContent=isCloud?msg("Changes are saved with the selected calendar provider."):msg("Local events are saved only in this browser.");
+ $('event-source-note').textContent=isCloud?(editingOnline?.recurring?msg("Recurring event. Changes apply only to this occurrence."):msg("Participants' names are automatically added before the event title.")):msg(sharedSettings.enabled?"Local event · Shared through the server.":"Local event · Saved only in this browser.");
+ $('editor-storage-note').textContent=isCloud?msg("Changes are saved with the selected calendar provider."):msg(sharedSettings.enabled?"Local events are saved on the server.":"Local events are saved only in this browser.");
  const [sid,cid]=parseSourceChoice($('event-source').value),source=onlineState.sources.find(s=>s.id===sid),calendar=source?.calendars.find(c=>c.id===cid);
  $('save-event').disabled=isCloud&&(!calendar||!!editingOnline&&(!editingOnline.writable||!editingOnline.onlineRecord.canUpdate)||!editingOnline&&!calendar.canCreate);
  $('delete').disabled=!!editingOnline&&(!editingOnline.onlineRecord.canDelete||!editingOnline.writable);

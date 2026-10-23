@@ -15,7 +15,7 @@ for name in ["config.json", "Dockerfile", "README.md", "DOCS.md"]:
     shutil.copy2(root / "home-assistant/addon" / name, target / name)
 app = target / "app"
 app.mkdir(exist_ok=True)
-for name in ["serve.py", "calendar_sources.py", "online_calendar.py", "requirements.txt"]:
+for name in ["serve.py", "calendar_sources.py", "online_calendar.py", "planner_state.py", "event_cache.py", "requirements.txt"]:
     shutil.copy2(root / name, app / name)
 shutil.copy2(root / "home-assistant/addon/run.py", app / "ha_ingress.py")
 shutil.copytree(root / "dist", app / "dist", dirs_exist_ok=True)

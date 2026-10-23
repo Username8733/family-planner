@@ -30,6 +30,8 @@ On Windows, use .venv\Scripts\python.exe instead of .venv/bin/python.
 - Swedish public holidays, observances and flag days, with localized names.
 - Eight themes with light and dark modes, including e-ink and an Apple-inspired Liquid Glass theme.
 - Today's forecast and outdoor temperature, with optional Home Assistant temperature sensors.
+- Shared server-side columns, preferences, appearance and local events across devices, with automatic migration of existing browser settings.
+- Persistent online event cache with background refresh and immediate invalidation after changes.
 - Import and export local events and settings.
 
 ## Calendar connections and data
@@ -38,7 +40,7 @@ See [ONLINE-CALENDAR.md](ONLINE-CALENDAR.md) for provider setup, Google OAuth an
 
 Enter credentials in Settings. They are stored only in private server-side files outside the repository, normally under ~/.local/share/hemma-calendar/. Credentials are excluded from Git and JSON exports. Google requires your own OAuth client ID and client secret. No working credentials are included.
 
-Local events and preferences are stored in the browser. Online events are fetched from their providers. Resetting the local calendar does not delete online events.
+With the Python server, planner settings and local events are shared by devices using that server. Opening dist/index.html without the server keeps data in that browser. Online events are cached privately on the server for fast loading and refreshed from their providers. Resetting the planner does not delete online events.
 
 ## Home Assistant
 
@@ -51,11 +53,13 @@ See [home-assistant/README.md](home-assistant/README.md). The included HA OS app
     .venv/bin/python test_calendar_sources.py
     .venv/bin/python test_ha_websocket.py
     .venv/bin/python test_ha_ingress.py
+    .venv/bin/python test_shared_state_cache.py
     .venv/bin/python qa-clean-template.py
     .venv/bin/python qa-multiple-calendars.py
     .venv/bin/python qa-settings-layout.py
     .venv/bin/python qa-event-entry.py
     .venv/bin/python qa-ha-adapter.py
+    .venv/bin/python qa-shared-state.py
 
 Browser checks use a separate temporary Brave profile and synthetic calendar data. Set BRAVE_BINARY when Brave is not installed in its default macOS location.
 

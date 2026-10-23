@@ -27,7 +27,7 @@ The card establishes an HA ingress session before loading the app and renews it 
 
 For Google OAuth, the app's dashboard_path option must match the dashboard's path (default /dashboard-family-planner/calendar). Register your public HTTPS HA origin plus that path as the Google Web application client's redirect URI. Google returns to the HA dashboard; the card then forwards the one-time code to the app after creating an authenticated ingress session. This preserves HA authentication during the return from Google. A real Google connection still requires your own OAuth client configuration.
 
-To update, prepare and copy the build context again, rebuild or update the local HA app, and refresh the card module's resource URL. App data remains in /data. Local browser events/settings remain in browser storage; use Export JSON and Import JSON when moving from a standalone origin to HA or between devices.
+To update, prepare and copy the build context again, rebuild or update the local HA app, and refresh the card module's resource URL. App data remains in /data. Shared settings, local events and the event cache remain in the private app data. Use Export JSON and Import JSON when moving to a different server.
 
 To remove the integration, remove its dashboard and module resource and uninstall the app. Export local events and back up the app first if its data should be retained.
 
@@ -44,9 +44,13 @@ The same dist/index.html works standalone. Static local mode does not require an
 
 ## Data and online calendars
 
-Local activities, columns, themes and preferences use browser localStorage. They do not synchronize automatically across devices. Changing the scheme, hostname or port creates a separate storage origin; export before moving or clearing browser data.
+With the HA app or Python server, local activities, columns, themes, weather/sensor preferences, language, time format and larger-row mode are stored in private planner-state.json and shared across devices. A fresh device loads the server configuration before requesting online events. Devices check for settings changes every 15 seconds while the planner is visible and no editor is open. Revision checks prevent an older device from silently overwriting newer changes.
 
-Online events come from connected providers, including HA calendar entities. This requires the running Python service; see [ONLINE-CALENDAR.md](../ONLINE-CALENDAR.md). A static /local/ copy has no Python API.
+On the first upgrade, open the planner in the browser containing the settings you want to keep. Its existing configuration initializes the server once. Fresh default-only browsers do not overwrite that configuration. Later visits use the server version. Unsaved changes that conflict with a newer server version are preserved in the browser and can be downloaded from Settings using Export unsaved changes.
+
+A static /local/ copy without the Python service still uses only browser localStorage. Export/import remains necessary when moving that static data to another browser or server.
+
+Online events come from connected providers, including HA calendar entities. Responses are cached privately in event-cache.sqlite3 for three minutes and survive app restarts. Expired cached events appear immediately in read-only mode while a background refresh runs. Failed calendars retain their last known events as read-only; successful calendars still update. Manual refresh bypasses the cache age, and event/source changes invalidate cached responses. The cache never stores provider passwords or tokens. This requires the running Python service; see [ONLINE-CALENDAR.md](../ONLINE-CALENDAR.md). A static /local/ copy has no Python API.
 
 For online mode, embed the running service's HTTPS address as a Webpage dashboard. A same-origin proxy is needed when combining it with the included temperature adapter.
 

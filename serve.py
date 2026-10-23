@@ -2,6 +2,7 @@
 """Standalone static app and same-origin iCloud API. Credentials stay on the server."""
 import argparse
 import base64
+import hashlib
 import hmac
 import importlib.util
 import json
@@ -14,13 +15,20 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from online_calendar import ICloudCalendar, CalendarError
-from calendar_sources import CalendarSources
+from calendar_sources import CalendarSources, interval
+from datetime import timezone
+from planner_state import PlannerState
+from event_cache import EventCache
 
 class CalendarHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
     def __init__(self, address, directory, backend=None, public_host=None, basic_auth=None, behind_proxy=False):
         self.backend = backend or ICloudCalendar()
         self.sources = CalendarSources(self.backend)
+        self.source_snapshot = self.sources.list()
+        self.planner_state = PlannerState(self.backend.config_file.parent/'planner-state.json')
+        self.event_cache = EventCache(self.backend.config_file.parent/'event-cache.sqlite3')
+        self.cache_identity = hashlib.sha256(json.dumps({'primary':self.backend.config,'sources':self.sources.data},sort_keys=True).encode()).hexdigest()
         self.csrf = secrets.token_urlsafe(32)
         self.allowed_hosts = {'localhost','127.0.0.1','::1'}
         if public_host:
@@ -28,6 +36,10 @@ class CalendarHTTPServer(ThreadingHTTPServer):
         self.basic_auth = basic_auth
         self.behind_proxy = behind_proxy
         super().__init__(address, partial(Handler, directory=str(directory)))
+
+    def server_close(self):
+        super().server_close()
+        self.event_cache.close()
 
 class Handler(SimpleHTTPRequestHandler):
     def log_request(self, code="-", size="-"):
@@ -79,9 +91,9 @@ class Handler(SimpleHTTPRequestHandler):
             self._json({'error':'Invalid request.'},400)
             return False
 
-    def _body(self):
+    def _body(self,max_size=65536):
         size = int(self.headers.get('Content-Length','0'))
-        if not 0 < size <= 65536 or self.headers.get_content_type() != 'application/json':
+        if not 0 < size <= max_size or self.headers.get_content_type() != 'application/json':
             raise CalendarError('Send a valid JSON request.',400)
         result = json.loads(self.rfile.read(size))
         if not isinstance(result,dict):
@@ -98,9 +110,16 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             path = urlsplit(self.path).path
             backend = self.server.backend
-            if path == '/api/v2/sources':
+            if path == '/api/state':
                 if self.command == 'GET':
-                    result = self.server.sources.list()
+                    result = self.server.planner_state.get()
+                elif self.command == 'PUT':
+                    result = self.server.planner_state.put(self._body(5_000_000))
+                else:
+                    raise CalendarError('The API endpoint does not exist.',404)
+            elif path == '/api/v2/sources':
+                if self.command == 'GET':
+                    result = self.server.source_snapshot
                 elif self.command == 'POST':
                     result = self.server.sources.add(self._body(), self._google_callback_url())
                 else:
@@ -116,7 +135,10 @@ class Handler(SimpleHTTPRequestHandler):
             elif path == '/api/v2/events':
                 if self.command == 'GET':
                     query = parse_qs(urlsplit(self.path).query)
-                    result = self.server.sources.events(query.get('start',[''])[0],query.get('end',[''])[0])
+                    first,last = query.get('start',[''])[0],query.get('end',[''])[0]
+                    interval(first,last,timezone.utc)
+                    cache_key = self.server.cache_identity+':'+first+':'+last
+                    result = self.server.event_cache.get(cache_key,lambda:self.server.sources.events(first,last),force=query.get('refresh')==['1'])
                 elif self.command in ['POST','PUT','DELETE']:
                     result = self.server.sources.mutate(self.command,self._body())
                 else:
@@ -147,6 +169,9 @@ class Handler(SimpleHTTPRequestHandler):
                     result = backend.delete(body.get('id',''),body.get('etag',''))
             else:
                 raise CalendarError('The API endpoint does not exist.',404)
+            if self.command != 'GET' and path != '/api/state':
+                self.server.source_snapshot = self.server.sources.list()
+                self.server.event_cache.invalidate()
             self._json(result)
         except CalendarError as error:
             self._json({'error':str(error)},error.status)
@@ -170,6 +195,8 @@ class Handler(SimpleHTTPRequestHandler):
                     raise CalendarError('Invalid host address.',403)
                 query = parse_qs(urlsplit(self.path).query)
                 self.server.sources.google_callback(query.get('state',[''])[0],query.get('code',[''])[0])
+                self.server.source_snapshot = self.server.sources.list()
+                self.server.event_cache.invalidate()
                 message = 'Google connected. Close this tab and choose calendars in Settings.'
                 status = 200
             except Exception:

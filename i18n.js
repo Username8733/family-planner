@@ -1,5 +1,22 @@
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "Unsaved changes were kept in Settings under Export unsaved changes.": "Osparade ändringar finns kvar i Inställningar under Exportera osparade ändringar.",
+  "Reset the shared columns and local events on all devices? Online events are not affected.": "Återställ gemensamma kolumner och lokala aktiviteter på alla enheter? Onlineaktiviteter påverkas inte.",
+  "Shared planner reset.": "Den gemensamma kalendern har återställts.",
+  "Replace the shared planner on all devices with the backup? Export first to keep the current data.": "Ersätt den gemensamma kalendern på alla enheter med säkerhetskopian? Exportera först om du vill behålla nuvarande data.",
+
+  "Shared settings are not available yet. Try again.": "Gemensamma inställningar är inte tillgängliga än. Försök igen.",
+  "The planner changed on another device. Reload before saving your changes.": "Kalendern har ändrats på en annan enhet. Ladda om innan du sparar dina ändringar.",
+  "Settings saved on server.": "Inställningarna har sparats på servern.",
+  "Shared calendar · Saved on server": "Gemensam kalender · Sparas på servern",
+  "Cached events · Updating…": "Cachade aktiviteter · Uppdaterar…",
+  "Local event · Shared through the server.": "Lokal aktivitet · Delas via servern.",
+  "Local events are saved on the server.": "Lokala aktiviteter sparas på servern.",
+  "Event saved on server.": "Aktiviteten har sparats på servern.",
+  "Changes are saved when you choose Save settings.": "Ändringarna sparas när du väljer Spara inställningar.",
+  "With the server, settings and local events are shared across devices. Without it, data stays in this browser. Export before moving to another server.": "Med servern delas inställningar och lokala aktiviteter mellan enheter. Utan server stannar data i den här webbläsaren. Exportera innan du flyttar till en annan server.",
+  "Export unsaved changes": "Exportera osparade ändringar",
+
   "The end defaults to one hour after the start unless you choose another end.": "Sluttiden blir en timme efter starttiden om du inte väljer ett annat slut.",
   "Close day view": "Stäng dagsvyn",
   "Event pages": "Sidor med aktiviteter",

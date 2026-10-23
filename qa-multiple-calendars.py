@@ -123,10 +123,10 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
    if s['type']=='caldav':raise CalendarError('Test error',502)
    return original_read(sid,s,c,first,last)
   app_server.sources._read=fail_source
-  ev("refreshOnline(true)");until("!onlineState.loading&&onlineState.sourceErrors.length===1")
+  ev("refreshOnline(true,true)");until("!onlineState.loading&&onlineState.sourceErrors.length===1")
   assert ev("onlineState.records.length===7&&calendarEvents().every(e=>!e.writable)&&onlineState.records.every(e=>e.stale)")
   app_server.sources._read=original_read
-  ev("refreshOnline(true)");until("!onlineState.loading&&!onlineState.error")
+  ev("refreshOnline(true,true)");until("!onlineState.loading&&!onlineState.error")
   # UI never stores server connection details or remote events in browser storage.
   assert ev("!JSON.stringify(localStorage).includes('test-password')&&!JSON.stringify(localStorage).includes('Edited shared')")
   ev("document.getElementById('columns').click();document.getElementById('source-type').value='google';document.getElementById('source-type').dispatchEvent(new Event('change'));document.getElementById('google-client-id').value='fixture.apps.googleusercontent.com';document.getElementById('google-client-secret').value='fixture-secret';document.getElementById('connect-source').click()")
