@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='hemma-caldav-test-') as temp:
         backend.select(result['calendars'][0]['id'])
         assert os.stat(backend.config_file).st_mode&0o777==0o600
         item={'summary':'Person 5, Person 4 - Cinema','date':'2026-10-24','endDate':'2026-10-24','time':'15:00','end':'17:00'}
-        backend.create(item)
+        backend.create(dict(item,description='Bring a notebook.\nMeet by the entrance.',location='Community hall'))
         results=backend.events('2026-10-01','2026-11-01')['events']
         assert len(results)==1,results
         # iCloud's discovered calendar lives on another hostname than discovery.
@@ -40,6 +40,13 @@ with tempfile.TemporaryDirectory(prefix='hemma-caldav-test-') as temp:
         backend.update(event['id'],event['etag'],dict(item,summary='Person 5 - Dance'))
         updated=backend.events('2026-10-01','2026-11-01')['events'][0]
         assert updated['summary']=='Person 5 - Dance'
+        assert updated['description']=='Bring a notebook.\nMeet by the entrance.' and updated['location']=='Community hall'
+        backend.update(updated['id'],updated['etag'],dict(item,summary='Person 5 - Dance',description='Changed notes',location='Room B'))
+        updated=backend.events('2026-10-01','2026-11-01')['events'][0]
+        assert updated['description']=='Changed notes' and updated['location']=='Room B'
+        backend.update(updated['id'],updated['etag'],dict(item,summary='Person 5 - Dance',description='',location=''))
+        updated=backend.events('2026-10-01','2026-11-01')['events'][0]
+        assert updated['description']=='' and updated['location']==''
         try:
             backend.update(event['id'],event['etag'],item)
             raise AssertionError('Stale ETag accepted')
@@ -65,6 +72,12 @@ with tempfile.TemporaryDirectory(prefix='hemma-caldav-test-') as temp:
         assert sum(e['summary']=='Person 5 - Weekly practice' for e in reread)==3,reread
         changed=next(e for e in reread if e['summary']=='Person 5 - Rescheduled practice')
         assert changed['date']=='2026-10-28'
+        assert changed['description']=='Keep the description' and changed['location']=='Sports hall'
+        backend.update(changed['id'],changed['etag'],dict(item,date='2026-10-28',endDate='2026-10-28',summary='Person 5 - Rescheduled practice',description='Occurrence notes',location='Hall B'))
+        reread=backend.events('2026-10-01','2026-11-20')['events']
+        changed=next(e for e in reread if e['summary']=='Person 5 - Rescheduled practice')
+        assert changed['description']=='Occurrence notes' and changed['location']=='Hall B'
+        assert all(e['description']=='Keep the description' and e['location']=='Sports hall' for e in reread if e['summary']=='Person 5 - Weekly practice')
         backend.delete(changed['id'],changed['etag'])
         remaining=backend.events('2026-10-01','2026-11-20')['events']
         assert sum(e['summary']=='Person 5 - Weekly practice' for e in remaining)==3
@@ -90,6 +103,10 @@ with tempfile.TemporaryDirectory(prefix='hemma-caldav-test-') as temp:
         request_id=str(uuid.uuid4())
         retried=dict(item,summary='Person 5 - Save once',requestId=request_id)
         backend.create(retried)
+        try:
+            backend.create(dict(retried,description='Different notes for the same request'))
+            raise AssertionError('Changed notes accepted for an existing save request')
+        except CalendarError as error:assert error.status==409
         assert backend.create(retried)['alreadySaved']
         assert sum(e['summary']=='Person 5 - Save once' for e in backend.events('2026-10-01','2026-11-01')['events'])==1
         try:

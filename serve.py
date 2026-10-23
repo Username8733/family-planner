@@ -28,7 +28,7 @@ class CalendarHTTPServer(ThreadingHTTPServer):
         self.source_snapshot = self.sources.list()
         self.planner_state = PlannerState(self.backend.config_file.parent/'planner-state.json')
         self.event_cache = EventCache(self.backend.config_file.parent/'event-cache.sqlite3')
-        self.cache_identity = hashlib.sha256(json.dumps({'primary':self.backend.config,'sources':self.sources.data},sort_keys=True).encode()).hexdigest()
+        self.cache_identity = hashlib.sha256(json.dumps({'event_schema':2,'primary':self.backend.config,'sources':self.sources.data},sort_keys=True).encode()).hexdigest()
         self.csrf = secrets.token_urlsafe(32)
         self.allowed_hosts = {'localhost','127.0.0.1','::1'}
         if public_host:

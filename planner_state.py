@@ -7,7 +7,7 @@ import tempfile
 import threading
 from datetime import date
 from pathlib import Path
-from online_calendar import CalendarError
+from online_calendar import CalendarError,event_details
 
 THEMES = {"home", "sage", "ocean", "sand", "plum", "start", "eink", "ios"}
 
@@ -41,7 +41,7 @@ def validate_state(value):
         fail()
     clean_events=[]; event_ids=set()
     for e in entries:
-        if not isinstance(e,dict) or set(e)-{"id","title","date","endDate","people","time","end","person"}:
+        if not isinstance(e,dict) or set(e)-{"id","title","date","endDate","people","time","end","person","description","location"}:
             fail()
         try:
             first=date.fromisoformat(e["date"]); last=date.fromisoformat(e.get("endDate",e["date"]))
@@ -61,8 +61,9 @@ def validate_state(value):
                 fail()
         if first==last and e.get("time") and e.get("end") and e["end"]<=e["time"]:
             fail()
+        details={"description":"","location":""}|event_details(e)
         event_ids.add(e["id"])
-        clean_events.append({k:e[k] for k in ("id","title","date")}|{"endDate":last.isoformat(),"people":list(dict.fromkeys(participants)),"time":e.get("time",""),"end":e.get("end","")})
+        clean_events.append({k:e[k] for k in ("id","title","date")}|{"endDate":last.isoformat(),"people":list(dict.fromkeys(participants)),"time":e.get("time",""),"end":e.get("end",""),**details})
     pref=value.get("preferences",{})
     allowed={"language","timeFormat","temperatureUnit","weatherLocation","temperatureSource","temperatureEntity","calendarMode","onlineFallback"}
     if not isinstance(pref,dict) or set(pref)-allowed:
@@ -106,6 +107,12 @@ class PlannerState:
         with self.lock:
             if body["revision"]!=self.value["revision"]:
                 raise CalendarError("The planner changed on another device. Reload before saving your changes.",409)
+            previous={e["id"]:e for e in (self.value.get("state") or {}).get("events",[])}
+            submitted={e["id"]:e for e in body["state"].get("events",[])}
+            for event in state["events"]:
+                for field in ("description","location"):
+                    if field not in submitted[event["id"]]:
+                        event[field]=previous.get(event["id"],{}).get(field,"")
             updated={"revision":self.value["revision"]+1,"state":state}
             self.path.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
             fd,name=tempfile.mkstemp(prefix=".planner-state-",dir=self.path.parent)

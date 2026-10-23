@@ -31,6 +31,23 @@ class SharedTests(unittest.TestCase):
             bad=state(); bad["preferences"]["password"]="must-not-be-stored"
             with self.assertRaises(CalendarError):store.put({"revision":1,"state":bad})
             self.assertNotIn("must-not-be-stored",path.read_text())
+    def test_event_details_survive_shared_state(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store=PlannerState(Path(folder)/"planner-state.json");data=state()
+            data["events"]=[{"id":"local-details","title":"Visit","date":"2026-10-24","endDate":"2026-10-24","people":["family"],"time":"","end":"","description":"Bring a notebook.\\nMeet at the entrance.","location":"Community hall"}]
+            store.put({"revision":0,"state":data})
+            result=PlannerState(store.path).get()["state"]["events"][0]
+            self.assertEqual(result["description"],data["events"][0]["description"])
+            self.assertEqual(result["location"],"Community hall")
+            legacy=copy.deepcopy(data);legacy["events"][0].pop("description");legacy["events"][0].pop("location")
+            store.put({"revision":1,"state":legacy})
+            self.assertEqual(store.get()["state"]["events"][0]["location"],"Community hall")
+            self.assertEqual(store.get()["state"]["events"][0]["description"],data["events"][0]["description"])
+            cleared=copy.deepcopy(data);cleared["events"][0].update(description="",location="")
+            store.put({"revision":2,"state":cleared})
+            self.assertEqual(store.get()["state"]["events"][0]["description"],"")
+            data["events"][0]["description"]="x"*10001
+            with self.assertRaises(CalendarError):store.put({"revision":3,"state":data})
     def test_http_shared_state_needs_csrf_and_is_not_static(self):
         with tempfile.TemporaryDirectory() as folder:
             server=CalendarHTTPServer(("127.0.0.1",0),Path(__file__).parent/"dist",ICloudCalendar(Path(folder)/"icloud.json"))

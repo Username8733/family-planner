@@ -7,7 +7,7 @@ from urllib.parse import urlencode, urlsplit, quote
 from urllib.request import Request, urlopen, build_opener, HTTPRedirectHandler
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
-from online_calendar import ICloudCalendar, CalendarError, libraries
+from online_calendar import ICloudCalendar, CalendarError, libraries, event_details
 
 GOOGLE_API = 'https://www.googleapis.com/calendar/v3'
 GOOGLE_TOKEN = 'https://oauth2.googleapis.com/token'
@@ -220,13 +220,13 @@ class CalendarSources:
             else:self.data['sources'].pop(sid,None)
             self.adapters={k:v for k,v in self.adapters.items() if k[0]!=sid};self._save()
             return self.list()
-    def _normalize(self,s,start,end,summary,remote,etag='',recurring=False,writable=False):
+    def _normalize(self,s,start,end,summary,remote,etag='',recurring=False,writable=False,description='',location=''):
         _,ical,_=libraries()
         root=ical.Calendar();e=ical.Event();e.add('UID',remote);e.add('DTSTART',start);e.add('DTEND',end);e.add('SUMMARY',summary);root.add_component(e)
         a=ICloudCalendar(self.path.parent/'unused-normalizer.json')
         a.config={'timezone':s['timezone'],'calendar_id':'normalize'}
         d=a._serialize(e,root,'https://invalid.example/event',etag)
-        return dict(d,id=remote,recurring=recurring,writable=writable)
+        return dict(d,id=remote,recurring=recurring,writable=writable,description=description or '',location=location or '')
     def _read(self,sid,s,c,first,last):
         tz=ZoneInfo(s['timezone']);a,b=interval(first,last,tz)
         if s['type'] in ('icloud','caldav'):
@@ -240,7 +240,7 @@ class CalendarSources:
                 for e in result.get('items',[]):
                     if e.get('status')=='cancelled':continue
                     def dt(v):return date.fromisoformat(v['date']) if 'date' in v else datetime.fromisoformat(v['dateTime'].replace('Z','+00:00'))
-                    output.append(self._normalize(s,dt(e['start']),dt(e['end']),e.get('summary','(Untitled)'),e['id'],e.get('etag',''),bool(e.get('recurringEventId')),c['canUpdate'] and bool(e.get('etag')) and not e.get('locked',False)))
+                    output.append(self._normalize(s,dt(e['start']),dt(e['end']),e.get('summary','(Untitled)'),e['id'],e.get('etag',''),bool(e.get('recurringEventId')),c['canUpdate'] and bool(e.get('etag')) and not e.get('locked',False),description=e.get('description',''),location=e.get('location','')))
                 page=result.get('nextPageToken')
                 if not page:return output
             raise CalendarError('Too many calendar events.',422)
@@ -255,7 +255,7 @@ class CalendarSources:
                 remote=json.dumps({'uid':e.get('uid'),'rid':e.get('recurrence_id'),'day':dt(e['start']).isoformat()[:10]},sort_keys=True)
                 writable=bool(e.get('uid')) and (c['canUpdate'] or c['canDelete'])
                 self.ha_cache[(sid,c['id'],remote)]=e
-                output.append(self._normalize(s,dt(e['start']),dt(e['end']),e.get('summary','(Untitled)'),remote,fingerprint,bool(e.get('recurrence_id')),writable))
+                output.append(self._normalize(s,dt(e['start']),dt(e['end']),e.get('summary','(Untitled)'),remote,fingerprint,bool(e.get('recurrence_id')),writable,description=e.get('description',''),location=e.get('location','')))
             return output
         if s['type']=='ics':
             _,raw,_=http(s['url']);_,ical,rec= libraries();root=ical.Calendar.from_ical(raw)
@@ -317,9 +317,10 @@ class CalendarSources:
                 return date.fromisoformat(value) if len(value)==10 else datetime.fromisoformat(value.replace('Z','+00:00'))
             component.add('DTSTART',parse(existing['start']));component.add('DTEND',parse(existing['end']))
         start,end=helper._dates(item,component)
+        details=event_details(item,existing)
         if isinstance(start,datetime):
-            return {'summary':item['summary'],'start':{'dateTime':start.isoformat(),'timeZone':s['timezone']},'end':{'dateTime':end.isoformat(),'timeZone':s['timezone']}}
-        return {'summary':item['summary'],'start':{'date':start.isoformat()},'end':{'date':end.isoformat()}}
+            return {'summary':item['summary'],'start':{'dateTime':start.isoformat(),'timeZone':s['timezone']},'end':{'dateTime':end.isoformat(),'timeZone':s['timezone']},**details}
+        return {'summary':item['summary'],'start':{'date':start.isoformat()},'end':{'date':end.isoformat()},**details}
     def mutate(self,method,item):
         with self.lock:
             if method=='POST':sid,cid=item.get('sourceId'),item.get('calendarId');remote=None
@@ -345,7 +346,7 @@ class CalendarSources:
                     except CalendarError as e:
                         if e.status!=409:raise
                         previous=self._google(s,path+'/'+payload['id'])
-                        if any(previous.get(k)!=payload[k] for k in ('summary','start','end')):raise
+                        if any(previous.get(k,'' if k in ('description','location') else None)!=payload[k] for k in ('summary','start','end','description','location') if k in payload):raise
                     return {'saved':True}
                 if not item.get('etag'):raise CalendarError('Refresh the calendar before changing the event.',409)
                 payload=None
@@ -374,11 +375,12 @@ class CalendarSources:
                     payload=self._payload(s,item,original)
                     command['event']={'summary':payload['summary'],'dtstart':payload['start'].get('date',payload['start'].get('dateTime')),'dtend':payload['end'].get('date',payload['end'].get('dateTime'))}
                     for field in ('description','location'):
-                        if original.get(field) is not None:command['event'][field]=original[field]
+                        if field in payload:command['event'][field]=payload[field]
+                        elif original.get(field) is not None:command['event'][field]=original[field]
                 return self._ha_ws(s,command)
             if s['type']=='ha' and method=='POST':
                 payload=self._payload(s,item);start,end=payload['start'],payload['end']
-                data={'entity_id':cid,'summary':payload['summary']}
+                data={'entity_id':cid,'summary':payload['summary'],**{k:payload[k] for k in ('description','location') if k in payload}}
                 data.update({'start_date':start['date'],'end_date':end['date']} if 'date' in start else {'start_date_time':start['dateTime'],'end_date_time':end['dateTime']})
                 # HA create_event has no idempotency key; cache confirmed requests.
                 request_id=item.get('requestId')

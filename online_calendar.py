@@ -20,6 +20,19 @@ class CalendarError(Exception):
         super().__init__(message)
         self.status = status
 
+DETAIL_LIMITS = {"description":10000, "location":1000}
+
+def event_details(item, existing=None):
+    result={}
+    for field,limit in DETAIL_LIMITS.items():
+        if field not in item:
+            continue
+        value=item[field]
+        if not isinstance(value,str) or len(value)>limit and value!=(existing or {}).get(field):
+            raise CalendarError("Notes may contain up to 10000 characters and location up to 1000 characters.",400)
+        result[field]=value
+    return result
+
 def libraries():
     try:
         import caldav
@@ -211,6 +224,7 @@ class ICloudCalendar:
                     'editEndDate':last.isoformat(), 'editEndTime':'', 'allDay':True}
         return dict(data, id=self._token({'url':url, 'uid':uid, 'rid':rid, 'calendar':self.config['calendar_id']}),
                     summary=str(component.get('SUMMARY', '(Untitled)')),
+                    description=str(component.get('DESCRIPTION','')),location=str(component.get('LOCATION','')),
                     etag=etag, recurring=recurring, calendarName=self.config.get('calendar_name', 'iCloud'),
                     writable=bool(etag))
 
@@ -284,6 +298,13 @@ class ICloudCalendar:
         summary = item.get('summary', '')
         if not isinstance(summary, str) or not summary.strip() or len(summary) > 512:
             raise CalendarError('The event title must contain 1–512 characters.')
+        details=event_details(item, {"description":str(component.get("DESCRIPTION","")),"location":str(component.get("LOCATION",""))})
+        for field,value in details.items():
+            name=field.upper()
+            if value==str(component.get(name,"")):
+                continue
+            component.pop(name,None)
+            if value: component.add(name,value)
         start, end = self._dates(item, component if component.get("DTSTART") is not None else None)
         if isinstance(start, datetime):
             # UTC serialization unambiguously retains the second autumn hour.
@@ -337,7 +358,7 @@ class ICloudCalendar:
                     existing, _ = self._fetch(client, url)
                     old = existing.walk('VEVENT')[0]
                     new = root.walk('VEVENT')[0]
-                    if str(old.get('SUMMARY')) != str(new.get('SUMMARY')) or identity(old['DTSTART']) != identity(new['DTSTART']) or identity(old['DTEND']) != identity(new['DTEND']):
+                    if any(str(old.get(field,''))!=str(new.get(field,'')) for field in ('SUMMARY','DESCRIPTION','LOCATION')) or identity(old['DTSTART']) != identity(new['DTSTART']) or identity(old['DTEND']) != identity(new['DTEND']):
                         raise CalendarError('This save request was already completed with different data. Refresh the calendar before trying again.',409)
                     return {'ok':True, 'alreadySaved':True}
             return {'ok':True}

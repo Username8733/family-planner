@@ -1,5 +1,15 @@
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "Location, optional": "Plats, valfritt",
+  "Notes, optional": "Anteckningar, valfritt",
+  "Address, room or meeting link": "Adress, rum eller möteslänk",
+  "Useful details for this event": "Bra att veta om aktiviteten",
+  "Location: ": "Plats: ",
+  "Notes: ": "Anteckningar: ",
+  " · Location: ": " · Plats: ",
+  " · Notes available": " · Anteckningar finns",
+  "Notes may contain up to 10000 characters and location up to 1000 characters.": "Anteckningar får vara högst 10000 tecken och plats högst 1000 tecken.",
+
   "Unsaved changes were kept in Settings under Export unsaved changes.": "Osparade ändringar finns kvar i Inställningar under Exportera osparade ändringar.",
   "Reset the shared columns and local events on all devices? Online events are not affected.": "Återställ gemensamma kolumner och lokala aktiviteter på alla enheter? Onlineaktiviteter påverkas inte.",
   "Shared planner reset.": "Den gemensamma kalendern har återställts.",

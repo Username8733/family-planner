@@ -7,3 +7,4 @@ The dashboard_path option must match the dashboard URL path for Google OAuth ret
 Provider credentials are stored privately in /data and survive updates. They are excluded from browser exports and are never placed in /config/www. Planner settings and local events are shared through private planner-state.json. The first existing browser initializes the server configuration on upgrade; fresh devices then load it automatically. Online events are cached in private event-cache.sqlite3, refreshed in the background after three minutes, and invalidated after changes. Home Assistant app backups contain the private provider configuration.
 
 The app exposes no host port and only accepts HTTP requests from Supervisor ingress. Do not add direct port mappings.
+\nEvent notes and location are edited in the event form and shown in the expanded day view. They sync with writable connected calendars and are included in shared local events and JSON backups.\n

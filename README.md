@@ -23,6 +23,7 @@ On Windows, use .venv\Scripts\python.exe instead of .venv/bin/python.
 
 - Rename, color and reorder columns.
 - Side-by-side activities, multi-day events with stable widths and multiple participants.
+- Event notes and location, with previews in the day view and support in connected calendars.
 - Tap a date or a dense day’s “+N” button for an enlarged, paged day view instead of scrolling inside cells.
 - Add events with a separate “+” button even on occupied days. A selected start time defaults to a one-hour event; explicit end times are preserved.
 - Connect iCloud, Google Calendar, Home Assistant, CalDAV and ICS feeds. Display multiple sources together.
@@ -60,6 +61,7 @@ See [home-assistant/README.md](home-assistant/README.md). The included HA OS app
     .venv/bin/python qa-event-entry.py
     .venv/bin/python qa-ha-adapter.py
     .venv/bin/python qa-shared-state.py
+    .venv/bin/python qa-event-details.py
 
 Browser checks use a separate temporary Brave profile and synthetic calendar data. Set BRAVE_BINARY when Brave is not installed in its default macOS location.
 

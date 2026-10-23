@@ -23,11 +23,11 @@ class Fixture(BaseHTTPRequestHandler):
         path=urlsplit(self.path).path;q=parse_qs(urlsplit(self.path).query)
         if path=='/feed.ics':
             if self.failure:return self.send({},500)
-            return self.send(b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:feed-test\r\nDTSTART;VALUE=DATE:20261030\r\nDTEND;VALUE=DATE:20261103\r\nSUMMARY:Person 5 - Break\r\nRRULE:FREQ=YEARLY;COUNT=2\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n',content='text/calendar')
+            return self.send(b'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:feed-test\r\nDTSTART;VALUE=DATE:20261030\r\nDTEND;VALUE=DATE:20261103\r\nSUMMARY:Person 5 - Break\r\nDESCRIPTION:Feed notes\r\nLOCATION:Public hall\r\nRRULE:FREQ=YEARLY;COUNT=2\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n',content='text/calendar')
         self.check()
         if path=='/api/calendars':return self.send([{'entity_id':'calendar.hem','name':'HA Home'}])
         if path=='/api/states':return self.send([{'entity_id':'calendar.hem','attributes':{'supported_features':1}}])
-        if path=='/api/calendars/calendar.hem':return self.send([{'summary':'Person 4 - HA Dance','start':{'dateTime':'2026-10-24T12:00:00+02:00'},'end':{'dateTime':'2026-10-24T13:00:00+02:00'}}])
+        if path=='/api/calendars/calendar.hem':return self.send([{'summary':'Person 4 - HA Dance','start':{'dateTime':'2026-10-24T12:00:00+02:00'},'end':{'dateTime':'2026-10-24T13:00:00+02:00'},'description':'HA notes','location':'HA hall'}])
         if path=='/google/users/me/calendarList':
             if 'pageToken' not in q:return self.send({'items':[{'id':'home@example.invalid','summary':'Google Home','accessRole':'owner'}],'nextPageToken':'second'})
             return self.send({'items':[{'id':'holidays','summary':'Holidays','accessRole':'reader'}]})
@@ -88,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix='hemma-providers-') as folder:
         # Don't query the readonly fixture calendar; capability assertions suffice.
         registry.configure(gs['id'],{'selected':['home@example.invalid']})
         item={'sourceId':gs['id'],'calendarId':'home@example.invalid','summary':'Person 5 - Test',
-              'date':'2026-10-24','endDate':'2026-10-24','time':'12:00','end':'13:00','requestId':str(uuid.uuid4())}
+              'date':'2026-10-24','endDate':'2026-10-24','time':'12:00','end':'13:00','requestId':str(uuid.uuid4()),'description':'First line\nSecond line','location':'Meeting room'}
         registry.mutate('POST',item);registry.mutate('POST',item)
         assert len(Fixture.events)==1
         d=registry.events('2026-10-01','2026-11-01')
@@ -96,20 +96,32 @@ with tempfile.TemporaryDirectory(prefix='hemma-providers-') as folder:
         assert len(d['events'])==4,len(d['events'])
         google=next(e for e in d['events'] if e['summary']=='Person 5 - Test')
         assert google['date']=='2026-10-24' and google['time']=='12:00' and google['writable']
+        assert google['description']==item['description'] and google['location']==item['location']
         assert next(e for e in d['events'] if e['summary'].endswith('Cinema'))['recurring']
         feed=next(e for e in d['events'] if e['sourceName']=='Feed')
         assert feed['endDate']=='2026-11-02' and not feed['writable'] and not feed['canDelete']
+        assert feed['description']=='Feed notes' and feed['location']=='Public hall'
         update=dict(item,id=google['id'],etag=google['etag'],summary='Person 5 - Updated')
+        update.pop('description');update.pop('location')
         registry.mutate('PUT',update)
         try:registry.mutate('PUT',update);raise AssertionError('Stale Google ETag accepted')
         except CalendarError as e:assert e.status==409
         updated=next(e for e in registry.events('2026-10-01','2026-11-01')['events'] if e['summary']=='Person 5 - Updated')
+        assert updated['description']==item['description'] and updated['location']==item['location']
+        registry.mutate('PUT',dict(update,id=updated['id'],etag=updated['etag'],description='Updated notes',location='Room B'))
+        updated=next(e for e in registry.events('2026-10-01','2026-11-01')['events'] if e['summary']=='Person 5 - Updated')
+        assert updated['description']=='Updated notes' and updated['location']=='Room B'
+        registry.mutate('PUT',dict(update,id=updated['id'],etag=updated['etag'],description='',location=''))
+        updated=next(e for e in registry.events('2026-10-01','2026-11-01')['events'] if e['summary']=='Person 5 - Updated')
+        assert updated['description']=='' and updated['location']==''
         registry.mutate('DELETE',{'id':updated['id'],'etag':updated['etag']});assert not Fixture.events
         ha=next(s for s in registry.list()['sources'] if s['type']=='ha')
         hi=dict(item,sourceId=ha['id'],calendarId='calendar.hem',time='',end='',endDate='2026-10-26',requestId=str(uuid.uuid4()))
         registry.mutate('POST',hi);registry.mutate('POST',hi)
         assert len(Fixture.ha_created)==1 and Fixture.ha_created[0]['end_date']=='2026-10-27'
+        assert Fixture.ha_created[0]['description']==item['description'] and Fixture.ha_created[0]['location']==item['location']
         haevent=next(e for e in d['events'] if e['sourceName']=='HA')
+        assert haevent['description']=='HA notes' and haevent['location']=='HA hall'
         try:registry.mutate('DELETE',{'id':haevent['id'],'etag':''});raise AssertionError('Read-only HA event mutated')
         except CalendarError as e:assert e.status==403
         Fixture.failure=True
