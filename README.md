@@ -70,3 +70,11 @@ Browser checks use a separate temporary Brave profile and synthetic calendar dat
 English is the source and default language. The optional Swedish catalog is maintained in i18n.js. Run python3 sync_i18n.py after editing it to embed the catalog in dist/index.html. No external scripts are required.
 
 The bundled Inter font is licensed under the SIL Open Font License; see [licenses/Inter-LICENSE.txt](licenses/Inter-LICENSE.txt).
+
+## Event overview before editing
+
+Selecting an existing event in the month or enlarged day view opens a read-only overview with its dates, start/end times, participants, location, notes and calendar. Choose **Edit** (**Ändra** in Swedish) to open the existing editor. Read-only, unavailable or non-updatable provider events have editing disabled. Adding a new event still opens the editor directly. Notes are the event description; this change does not add push notifications or reminder delivery.
+
+The overview uses the selected theme and language, supports long notes on mobile and can be closed with Back, × or Escape. The read-first entry point is `openEvent`; `editEvent` opens the editor for integrations that already supply an overview (including the Surface Go wallboard). Source labels live in `i18n.js`; run `python3 sync_i18n.py` after changing them.
+
+Verification: `python3 qa-event-overview.py` runs an isolated browser check without real calendar connections. Set `BRAVE_BINARY` to another Chromium-compatible executable if needed. `qa-event-details.py` exercises creating, viewing, editing and clearing notes/location against an isolated CalDAV server. HA deployment uses the existing [app build procedure](home-assistant/README.md). Back up the current build context and app data before rebuilding; the frontend update does not require changing calendar connections or shared preferences.

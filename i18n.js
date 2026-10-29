@@ -1,5 +1,21 @@
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "Close event overview": "Stäng händelseöversikt",
+  "Location": "Plats",
+  "Notes": "Anteckningar / notiser",
+  "Calendar": "Kalender",
+  "Back": "Tillbaka",
+  "Edit": "Ändra",
+  "No location specified.": "Ingen plats angiven.",
+  "No notes.": "Inga anteckningar.",
+  "No participants specified.": "Inga deltagare angivna.",
+  "Choose Edit to change this event.": "Tryck på Ändra för att redigera händelsen.",
+  "This event is read-only or its calendar is unavailable.": "Händelsen är skrivskyddad eller kalendern kan inte nås just nu.",
+  "Online calendar": "Onlinekalender",
+  "Until ": "Till ",
+  " \u00b7 Select an event for details": " · Tryck på en aktivitet för detaljer",
+  ". View event details.": ". Visa händelsens detaljer.",
+
   "Location, optional": "Plats, valfritt",
   "Notes, optional": "Anteckningar, valfritt",
   "Address, room or meeting link": "Adress, rum eller möteslänk",

@@ -591,6 +591,20 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
 .source-card .text-button{margin-top:7px}.source-capability{font-size:10px;color:var(--muted)}
 #google-authorize{display:inline-flex;align-items:center;margin-top:12px;text-decoration:none;color:var(--accent);border:1px solid var(--border)}
 #google-redirect{overflow-wrap:anywhere}.source-card .source-account{margin:0 0 10px;overflow-wrap:anywhere}
+
+/* Read an event first; editing is an explicit action. */
+#event-overview{width:min(640px,calc(100vw - 32px));overflow:hidden}
+#event-overview[open]{display:flex;flex-direction:column}
+#event-overview>.dialog-head,#event-overview>.dialog-sub,#event-overview>.overview-footer{flex-shrink:0}
+#overview-title{overflow-wrap:anywhere}
+#event-overview .overview-content{overflow:auto;min-height:0;overscroll-behavior:contain}
+.overview-time{font-size:26px;font-weight:700;padding:18px;border:1px solid var(--border);border-radius:14px;background:var(--control)}
+.overview-content section{margin-top:22px}.overview-content h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 9px}
+.overview-content p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px;line-height:1.6}
+.overview-people{display:flex;flex-wrap:wrap;gap:8px}.overview-people span{padding:8px 12px;border-radius:20px;border:1px solid var(--border);background:var(--control);font-size:14px}
+.overview-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;justify-content:space-between}.overview-footer .notice{margin:0;line-height:1.5}.overview-footer>div{display:flex;gap:8px;flex-shrink:0}
+#overview-edit:disabled{opacity:.5;cursor:default}
+@media(max-width:520px){.overview-footer{flex-wrap:wrap;padding:14px 20px}.overview-footer>div{margin-left:auto}.overview-time{font-size:23px}}
 </style>
 </head>
 <body>
@@ -615,6 +629,18 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
 <p class="dialog-sub" id="day-summary"></p>
 <div class="day-events" id="day-events"></div>
 <div class="day-footer"><button type="button" class="add" id="day-add">+ New event</button><nav class="day-pages" aria-label="Event pages"><button type="button" class="icon" id="day-prev" aria-label="Previous events">‹</button><span class="day-page-label" id="day-page" aria-live="polite"></span><button type="button" class="icon" id="day-next" aria-label="Next events">›</button></nav></div>
+</dialog>
+<dialog id="event-overview" aria-labelledby="overview-title" aria-describedby="overview-date">
+<div class="dialog-head"><h2 id="overview-title" tabindex="-1"></h2><button type="button" class="close" id="close-overview" aria-label="Close event overview">×</button></div>
+<p class="dialog-sub" id="overview-date"></p>
+<div class="dialog-content overview-content">
+<div class="overview-time" id="overview-time"></div>
+<section><h3>Participants</h3><div id="overview-people" class="overview-people"></div></section>
+<section><h3>Location</h3><p id="overview-location"></p></section>
+<section><h3>Notes</h3><p id="overview-notes"></p></section>
+<section><h3>Calendar</h3><p id="overview-calendar"></p></section>
+</div>
+<div class="overview-footer"><p class="notice" id="overview-edit-note"></p><div><button type="button" class="today" id="overview-back">Back</button><button type="button" class="add" id="overview-edit">Edit</button></div></div>
 </dialog>
 <dialog id="editor" aria-labelledby="editor-title">
 <div class="dialog-head"><h2 id="editor-title">New event</h2><button class="close" id="close" aria-label="Close">×</button></div><p class="dialog-sub" id="editor-sub">A little plan to look forward to.</p>
@@ -722,6 +748,22 @@ input::placeholder{color:var(--muted);opacity:.9}.column-row .column-swatch{bord
 <script>
 // English is the source language; this catalog preserves optional Swedish UI translations.
 const swedishMessages={
+  "Close event overview": "Stäng händelseöversikt",
+  "Location": "Plats",
+  "Notes": "Anteckningar / notiser",
+  "Calendar": "Kalender",
+  "Back": "Tillbaka",
+  "Edit": "Ändra",
+  "No location specified.": "Ingen plats angiven.",
+  "No notes.": "Inga anteckningar.",
+  "No participants specified.": "Inga deltagare angivna.",
+  "Choose Edit to change this event.": "Tryck på Ändra för att redigera händelsen.",
+  "This event is read-only or its calendar is unavailable.": "Händelsen är skrivskyddad eller kalendern kan inte nås just nu.",
+  "Online calendar": "Onlinekalender",
+  "Until ": "Till ",
+  " \u00b7 Select an event for details": " · Tryck på en aktivitet för detaljer",
+  ". View event details.": ". Visa händelsens detaljer.",
+
   "Location, optional": "Plats, valfritt",
   "Notes, optional": "Anteckningar, valfritt",
   "Address, room or meeting link": "Adress, rum eller möteslänk",
@@ -1481,7 +1523,7 @@ function cellContent(cell,date,p,groups){
   const e=slot.event,range=endDateOf(e)!==e.date,ids=participants(e),shared=ids.length>1;
   const firstVisible=e.date>key(month)?e.date:key(month),showLabel=!range||(date===firstVisible&&p.id===people.find(p=>ids.includes(p.id)).id);
   b.className='event';b.dataset.eventId=e.id;if(e.online)b.dataset.source='online';
-  b.title=describe(e);b.setAttribute('aria-label',p.name+': '+describe(e)+msg(". Edit event."));
+  b.title=describe(e);b.setAttribute('aria-label',p.name+': '+describe(e)+msg(". View event details."));
   if(shared){b.classList.add('shared');b.style.setProperty('--person',sharedColor)}
   if(range){b.style.setProperty('--range-tone',rangeTone(e.id));cell.classList.add('has-range');b.classList.add('range',date===e.date?'range-start':date===endDateOf(e)?'range-end':'range-middle')}
   const content=document.createElement('span');content.className='event-content';
@@ -1602,13 +1644,13 @@ function renderDay(){
  const size=dayPageSize(),pages=Math.max(1,Math.ceil(items.length/size));
  detailPage=Math.max(0,Math.min(detailPage,pages-1));
  $('day-title').textContent=detailDate;
- $('day-summary').textContent=makeDate(detailDate).toLocaleDateString(locale(),{weekday:'long'})+' · '+items.length+msg(' events')+msg(' · Select an event to edit');
+ $('day-summary').textContent=makeDate(detailDate).toLocaleDateString(locale(),{weekday:'long'})+' · '+items.length+msg(' events')+msg(' · Select an event for details');
  $('day-events').replaceChildren();
  if(!items.length){const empty=document.createElement('p');empty.className='day-empty';empty.textContent=msg('No events this day.');$('day-events').append(empty)}
  for(const e of items.slice(detailPage*size,(detailPage+1)*size)){
   const ids=participants(e),person=people.find(p=>p.id===ids[0]),b=document.createElement('button');
   b.type='button';b.className='day-event';b.dataset.eventId=e.id;b.style.setProperty('--person',ids.length>1?sharedColor:person.color);
-  b.setAttribute('aria-label',describe(e)+msg('. Edit event.'));b.title=describe(e);
+  b.setAttribute('aria-label',describe(e)+msg('. View event details.'));b.title=describe(e);
   const title=document.createElement('strong');title.textContent=e.title;
   const when=document.createElement('small');when.textContent=(e.date!==endDateOf(e)?e.date+' – '+endDateOf(e)+' · ':'')+((e.time||e.end)?formatTime(e.time||'00:00')+(e.end?' – '+formatTime(e.end):''):msg('All day'));
   const names=document.createElement('small');names.className='day-participants';names.textContent=(ids.length>1?'↔ ':'')+ids.map(id=>people.find(p=>p.id===id).name).join(', ');
@@ -1641,9 +1683,33 @@ renderPersonOptions();
 function openCell(date,person){
  activeDate=date;activePerson=person;fill({date,endDate:date,person});if(!$('editor').open)$('editor').showModal();
 }
+let overviewSelection=null;
+function eventCanEdit(event){return !event.online||!!(event.writable&&event.onlineRecord?.canUpdate)}
+function overviewDate(value){return /^\d{4}-\d{2}-\d{2}$/.test(value||'')?makeDate(value).toLocaleDateString(locale(),{weekday:'long',day:'numeric',month:'long',year:'numeric'}):value||''}
 function openEvent(event,date,person){
+ overviewSelection={event,date,person};const record=event.onlineRecord||{};
+ const endDate=record.editEndDate||endDateOf(event),endTime=record.editEndTime??event.end??'';
+ $('overview-title').textContent=event.title||record.summary||msg('Event');
+ $('overview-date').textContent=overviewDate(event.date)+(endDate&&endDate!==event.date?' – '+overviewDate(endDate):'');
+ $('overview-time').textContent=event.time?formatTime(event.time)+(endTime?' – '+formatTime(endTime):''):endTime?msg('Until ')+formatTime(endTime):msg('All day');
+ const names=participants(event).map(id=>{const person=people.find(p=>p.id===id),span=document.createElement('span');span.textContent=person?.name||id;return span});
+ $('overview-people').replaceChildren(...names);if(!names.length)$('overview-people').textContent=msg('No participants specified.');
+ $('overview-location').textContent=event.location||record.location||msg('No location specified.');
+ $('overview-notes').textContent=event.description||record.description||msg('No notes.');
+ $('overview-calendar').textContent=event.online?(record.calendarName||record.sourceName||msg('Online calendar')):msg('Local calendar');
+ const writable=eventCanEdit(event);$('overview-edit').disabled=!writable;
+ $('overview-edit-note').textContent=msg(writable?'Choose Edit to change this event.':'This event is read-only or its calendar is unavailable.');
+ if(!$('event-overview').open)$('event-overview').showModal();$('overview-title').focus({preventScroll:true});
+}
+function editEvent(event,date,person){
  activeDate=date;activePerson=person;fill(event);if(!$('editor').open)$('editor').showModal();
 }
+$('close-overview').onclick=$('overview-back').onclick=()=>$('event-overview').close();
+$('event-overview').addEventListener('close',()=>{overviewSelection=null});
+$('overview-edit').onclick=()=>{
+ const selected=overviewSelection;if(!selected||!eventCanEdit(selected.event))return;
+ $('event-overview').close();editEvent(selected.event,selected.date,selected.person);
+};
 // randomUUID requires a secure context; HA can also be opened over LAN HTTP.
 function newRequestId(){
  if(typeof globalThis.crypto.randomUUID==='function')return globalThis.crypto.randomUUID();

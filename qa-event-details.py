@@ -38,7 +38,7 @@ def cleanup_online():
 atexit.register(cleanup_online)
 
 with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
- proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--no-proxy-server','--host-resolver-rules=MAP planner.test 127.0.0.1','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--disable-extensions','--no-proxy-server','--host-resolver-rules=MAP planner.test 127.0.0.1','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  try:
   for _ in range(100):
    f=Path(temp)/'DevToolsActivePort'
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
    time.sleep(.1)
   port=f.read_text().splitlines()[0]
   targets=json.load(urllib.request.urlopen('http://127.0.0.1:'+port+'/json',timeout=4))
-  ws=websocket.create_connection(targets[0]['webSocketDebuggerUrl'],suppress_origin=True,timeout=20);seq=0;errors=[];network=[]
+  ws=websocket.create_connection(next(t for t in targets if t.get('type')=='page')['webSocketDebuggerUrl'],suppress_origin=True,timeout=60);seq=0;errors=[];network=[]
   def call(method,params=None):
    global seq
    seq+=1;ws.send(json.dumps({'id':seq,'method':method,'params':params or {}}))
@@ -68,7 +68,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
    for _ in range(200):
     if ev("typeof onlineState!=='undefined'&&("+code+")"):return
     time.sleep(.04)
-   raise AssertionError('Timeout: '+code)
+   raise AssertionError('Timeout: '+code+'; runtime='+json.dumps(errors)+'; page='+json.dumps(ev("({url:location.href,title:document.title,body:document.body.innerText.slice(0,800)})")))
   call('Emulation.setDeviceMetricsOverride',{'width':1440,'height':1000,'deviceScaleFactor':1,'mobile':False})
   call('Page.navigate',{'url':app_url})
   until("sharedSettings.ready&&onlineState.sources.length===1")
@@ -84,6 +84,8 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   assert ev("document.querySelector('#day-events .has-details .day-extra').textContent.includes('Community hall')")
   assert ev("document.querySelectorAll('#day-events img').length===0")
   ev("[...document.querySelectorAll('#day-events .day-event')].find(b=>b.querySelector('strong').textContent==='Notes test').click()")
+  assert ev("document.getElementById('event-overview').open&&!document.getElementById('editor').open")
+  ev("document.getElementById('overview-edit').click()")
   assert ev("document.getElementById('event-description').value==="+json.dumps(note))
   assert ev("document.getElementById('event-location').value==="+json.dumps(place))
   for label,w,h in [('desktop',1440,1000),('phone',390,844)]:
@@ -98,7 +100,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   ev("document.getElementById('event-description').value='Updated notes';document.getElementById('event-location').value='Hall C';document.getElementById('save-event').click()")
   until("!document.getElementById('editor').open&&!onlineState.loading&&calendarEvents().find(e=>e.title==='Notes test')?.location==='Hall C'")
   assert ev("calendarEvents().find(e=>e.title==='Notes test').description==='Updated notes'")
-  ev("document.getElementById('close-day').click();openEvent(calendarEvents().find(e=>e.title==='Notes test'),'2026-10-28','family');document.getElementById('event-description').value='';document.getElementById('event-location').value='';document.getElementById('save-event').click()")
+  ev("document.getElementById('close-day').click();openEvent(calendarEvents().find(e=>e.title==='Notes test'),'2026-10-28','family');document.getElementById('overview-edit').click();document.getElementById('event-description').value='';document.getElementById('event-location').value='';document.getElementById('save-event').click()")
   until("!document.getElementById('editor').open&&!onlineState.loading&&calendarEvents().find(e=>e.title==='Notes test')?.description===''")
   assert ev("calendarEvents().find(e=>e.title==='Notes test').location===''")
   # Local activities use the same fields and share them through the server.
@@ -107,7 +109,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   stored=app_server.planner_state.get()['state']
   local=next(e for e in stored['events'] if e['title']=='Local details')
   assert local['description']=='Local notes' and local['location']=='Local room'
-  ev("openEvent(events.find(e=>e.title==='Local details'),'2026-10-29','family')")
+  ev("openEvent(events.find(e=>e.title==='Local details'),'2026-10-29','family');document.getElementById('overview-edit').click()")
   assert ev("document.getElementById('event-description').value==='Local notes'&&document.getElementById('event-location').value==='Local room'")
   ev("document.getElementById('close').click()")
   call('Page.reload');until("sharedSettings.ready&&events.some(e=>e.title==='Local details')&&!onlineState.loading")

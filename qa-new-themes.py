@@ -4,7 +4,7 @@ from pathlib import Path
 import websocket
 root=Path(__file__).resolve().parent;qa=root/'qa';qa.mkdir(exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
- proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--disable-extensions','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  try:
   for _ in range(100):
    f=Path(temp)/'DevToolsActivePort'
@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
    time.sleep(.1)
   port=f.read_text().splitlines()[0]
   targets=json.load(urllib.request.urlopen('http://127.0.0.1:'+port+'/json',timeout=4))
-  ws=websocket.create_connection(targets[0]['webSocketDebuggerUrl'],suppress_origin=True,timeout=20);seq=0;errors=[];network=[]
+  ws=websocket.create_connection(next(t for t in targets if t.get('type')=='page')['webSocketDebuggerUrl'],suppress_origin=True,timeout=60);seq=0;errors=[];network=[]
   def call(method,params=None):
    global seq
    seq+=1;ws.send(json.dumps({'id':seq,'method':method,'params':params or {}}))
@@ -30,6 +30,10 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   call('Page.enable');call('Runtime.enable');call('Network.enable')
 
   call('Page.navigate',{'url':(root/'dist/index.html').as_uri()});time.sleep(.4)
+  for _ in range(150):
+   if ev('typeof render==="function"'):break
+   time.sleep(.1)
+  assert ev('typeof render==="function"'),ev('({url:location.href,title:document.title,body:document.body.innerText.slice(0,500)})')
   ev('month=new Date(2026,9,1);events=[\n   {id:\'ink-single\',title:"Dentist",date:\'2026-10-22\',endDate:\'2026-10-22\',people:[\'person-1\'],time:\'09:00\',end:\'10:00\'},\n   {id:\'ink-shared\',title:"Family dinner",date:\'2026-10-23\',endDate:\'2026-10-23\',people:[\'person-1\',\'person-2\'],time:\'18:00\',end:\'\'},\n   {id:\'ink-range\',title:"Autumn break",date:\'2026-10-24\',endDate:\'2026-10-28\',people:[\'person-5\'],time:\'\',end:\'\'}\n  ];render()')
   assert ev("['eink','ios'].every(id=>[...document.getElementById('visual-theme').options].some(o=>o.value===id))")
   for label,w,h in [('desktop',1440,1000),('ipad',768,1024),('ipad-landscape',1024,768)]:
@@ -52,6 +56,8 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   call('Page.reload');time.sleep(.35)
   assert ev("appearance.theme==='ios'&&appearance.mode==='dark'&&document.documentElement.dataset.theme==='ios'")
   ev("document.querySelector('.event').click()")
+  assert ev("document.getElementById('event-overview').open&&!document.getElementById('editor').open")
+  ev("document.getElementById('overview-edit').click()")
   assert ev("document.getElementById('editor').open")
   ev("document.getElementById('close').click()")
   assert not errors,errors

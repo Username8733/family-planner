@@ -8,3 +8,4 @@ Provider credentials are stored privately in /data and survive updates. They are
 
 The app exposes no host port and only accepts HTTP requests from Supervisor ingress. Do not add direct port mappings.
 \nEvent notes and location are edited in the event form and shown in the expanded day view. They sync with writable connected calendars and are included in shared local events and JSON backups.\n
+Existing events now open an overview first, with times, participants, location and notes. Choose **Edit / Ändra** to edit. The overview is available through both the HA dashboard and app ingress. Provider write permissions remain in force; new events continue to open the editor directly. Reload an already open Family Planner browser frame after updating the app.

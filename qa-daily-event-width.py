@@ -4,7 +4,7 @@ from pathlib import Path
 import websocket
 root=Path(__file__).resolve().parent;qa=root/'qa';qa.mkdir(exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
- proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--disable-extensions','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  try:
   for _ in range(100):
    f=Path(temp)/'DevToolsActivePort'
@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
    time.sleep(.1)
   port=f.read_text().splitlines()[0]
   targets=json.load(urllib.request.urlopen('http://127.0.0.1:'+port+'/json',timeout=4))
-  ws=websocket.create_connection(targets[0]['webSocketDebuggerUrl'],suppress_origin=True,timeout=20);seq=0;errors=[];network=[]
+  ws=websocket.create_connection(next(t for t in targets if t.get('type')=='page')['webSocketDebuggerUrl'],suppress_origin=True,timeout=60);seq=0;errors=[];network=[]
   def call(method,params=None):
    global seq
    seq+=1;ws.send(json.dumps({'id':seq,'method':method,'params':params or {}}))
@@ -30,6 +30,10 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   call('Page.enable');call('Runtime.enable');call('Network.enable')
 
   call('Page.navigate',{'url':(root/'dist/index.html').as_uri()});time.sleep(.2)
+  for _ in range(150):
+   if ev('typeof render==="function"'):break
+   time.sleep(.1)
+  assert ev('typeof render==="function"'),ev('({url:location.href,title:document.title,body:document.body.innerText.slice(0,500)})')
   ev("""month=new Date(2026,9,1);events=[
    {id:'range-a',title:'Long event',date:'2026-10-22',endDate:'2026-10-25',people:['family'],time:'',end:''},
    {id:'range-b',title:'Shared event',date:'2026-10-23',endDate:'2026-10-24',people:['family','person-1'],time:'',end:''},
@@ -71,7 +75,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   ev("detailPage=0;renderDay()")
   while not ev("!!document.querySelector('#day-events [data-event-id=\"range-b\"]')"):
    ev("document.getElementById('day-next').click()")
-  ev("""document.querySelector('#day-events [data-event-id="range-b"]').click();document.getElementById('title').value='Updated shared event';document.getElementById('event-form').requestSubmit()""")
+  ev("""document.querySelector('#day-events [data-event-id="range-b"]').click();document.getElementById('overview-edit').click();document.getElementById('title').value='Updated shared event';document.getElementById('event-form').requestSubmit()""")
   assert ev("events.find(e=>e.id==='range-b').people.length===2&&document.getElementById('day-detail').open&&!document.getElementById('editor').open")
   ev("detailPage=0;renderDay()")
   while not ev("!!document.querySelector('#day-events [data-event-id=range-b]')"):

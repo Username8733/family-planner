@@ -38,7 +38,7 @@ def cleanup_online():
 atexit.register(cleanup_online)
 
 with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
- proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--no-proxy-server','--host-resolver-rules=MAP planner.test 127.0.0.1','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ proc=subprocess.Popen([os.environ.get('BRAVE_BINARY','/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'),'--headless','--disable-extensions','--no-proxy-server','--host-resolver-rules=MAP planner.test 127.0.0.1','--disable-gpu','--no-first-run','--disable-background-networking','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+temp,'about:blank'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  try:
   for _ in range(100):
    f=Path(temp)/'DevToolsActivePort'
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
    time.sleep(.1)
   port=f.read_text().splitlines()[0]
   targets=json.load(urllib.request.urlopen('http://127.0.0.1:'+port+'/json',timeout=4))
-  ws=websocket.create_connection(targets[0]['webSocketDebuggerUrl'],suppress_origin=True,timeout=20);seq=0;errors=[];network=[]
+  ws=websocket.create_connection(next(t for t in targets if t.get('type')=='page')['webSocketDebuggerUrl'],suppress_origin=True,timeout=60);seq=0;errors=[];network=[]
   def call(method,params=None):
    global seq
    seq+=1;ws.send(json.dumps({'id':seq,'method':method,'params':params or {}}))
@@ -109,7 +109,7 @@ with tempfile.TemporaryDirectory(prefix='browser-',dir=qa) as temp:
   ev("""document.getElementById('title').value='Shared test';document.querySelectorAll('#person-options input').forEach(el=>el.checked=['person-5','person-4'].includes(el.value));document.getElementById('date').value='2026-10-28';document.getElementById('end-date').value='2026-10-28';document.getElementById('event-form').requestSubmit()""")
   until("!document.getElementById('editor').open&&!onlineState.loading&&onlineState.records.length===7")
   assert ev("calendarEvents().find(e=>e.title==='Shared test').people.length===2")
-  ev("""document.querySelector('.cell[data-date="2026-10-28"][data-person="person-5"] .event').click();document.getElementById('title').value='Edited shared';document.getElementById('event-form').requestSubmit()""")
+  ev("""document.querySelector('.cell[data-date="2026-10-28"][data-person="person-5"] .event').click();document.getElementById('overview-edit').click();document.getElementById('title').value='Edited shared';document.getElementById('event-form').requestSubmit()""")
   until("!document.getElementById('editor').open&&!onlineState.loading&&calendarEvents().some(e=>e.title==='Edited shared')")
   # Switch language back through the actual settings save flow.
   ev("document.getElementById('columns').click();document.getElementById('setting-language').value='sv';document.getElementById('save-columns').click()")
